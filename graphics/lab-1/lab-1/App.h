@@ -6,13 +6,13 @@
 
 namespace lab_1
 {
-	// Main entry point for our app. Connects the app with the Windows shell and handles application lifecycle events.
+	// Главная точка входа для вашего приложения. Связывает приложение с оболочкой Windows и обрабатывает события времени жизни приложения.
 	ref class App sealed : public Windows::ApplicationModel::Core::IFrameworkView
 	{
 	public:
 		App();
 
-		// IFrameworkView Methods.
+		// Методы IFrameworkView.
 		virtual void Initialize(Windows::ApplicationModel::Core::CoreApplicationView^ applicationView);
 		virtual void SetWindow(Windows::UI::Core::CoreWindow^ window);
 		virtual void Load(Platform::String^ entryPoint);
@@ -20,17 +20,17 @@ namespace lab_1
 		virtual void Uninitialize();
 
 	protected:
-		// Application lifecycle event handlers.
+		// Обработчики событий жизненного цикла приложения.
 		void OnActivated(Windows::ApplicationModel::Core::CoreApplicationView^ applicationView, Windows::ApplicationModel::Activation::IActivatedEventArgs^ args);
 		void OnSuspending(Platform::Object^ sender, Windows::ApplicationModel::SuspendingEventArgs^ args);
 		void OnResuming(Platform::Object^ sender, Platform::Object^ args);
 
-		// Window event handlers.
+		// Обработчики событий окна.
 		void OnWindowSizeChanged(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::WindowSizeChangedEventArgs^ args);
 		void OnVisibilityChanged(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::VisibilityChangedEventArgs^ args);
 		void OnWindowClosed(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::CoreWindowEventArgs^ args);
 
-		// DisplayInformation event handlers.
+		// Обработчики события DisplayInformation
 		void OnDpiChanged(Windows::Graphics::Display::DisplayInformation^ sender, Platform::Object^ args);
 		void OnOrientationChanged(Windows::Graphics::Display::DisplayInformation^ sender, Platform::Object^ args);
 		void OnDisplayContentsInvalidated(Windows::Graphics::Display::DisplayInformation^ sender, Platform::Object^ args);

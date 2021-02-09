@@ -6,14 +6,14 @@
 using namespace lab_1;
 using namespace Microsoft::WRL;
 
-// Initializes D2D resources used for text rendering.
+// Инициализирует ресурсы D2D, используемые для прорисовки текста.
 SampleFpsTextRenderer::SampleFpsTextRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources) : 
 	m_text(L""),
 	m_deviceResources(deviceResources)
 {
 	ZeroMemory(&m_textMetrics, sizeof(DWRITE_TEXT_METRICS));
 
-	// Create device independent resources
+	// Создание ресурсов, не зависящих от устройства
 	ComPtr<IDWriteTextFormat> textFormat;
 	DX::ThrowIfFailed(
 		m_deviceResources->GetDWriteFactory()->CreateTextFormat(
@@ -43,10 +43,10 @@ SampleFpsTextRenderer::SampleFpsTextRenderer(const std::shared_ptr<DX::DeviceRes
 	CreateDeviceDependentResources();
 }
 
-// Updates the text to be displayed.
+// Обновляет текст, который требуется отобразить.
 void SampleFpsTextRenderer::Update(DX::StepTimer const& timer)
 {
-	// Update display text.
+	// Обновление отображаемого текста.
 	uint32 fps = timer.GetFramesPerSecond();
 
 	m_text = (fps > 0) ? std::to_wstring(fps) + L" FPS" : L" - FPS";
@@ -57,8 +57,8 @@ void SampleFpsTextRenderer::Update(DX::StepTimer const& timer)
 			m_text.c_str(),
 			(uint32) m_text.length(),
 			m_textFormat.Get(),
-			240.0f, // Max width of the input text.
-			50.0f, // Max height of the input text.
+			240.0f, // Макс. ширина вводимого текста.
+			50.0f, // Макс. высота вводимого текста.
 			&textLayout
 			)
 		);
@@ -72,7 +72,7 @@ void SampleFpsTextRenderer::Update(DX::StepTimer const& timer)
 		);
 }
 
-// Renders a frame to the screen.
+// Прорисовывает кадр на экране.
 void SampleFpsTextRenderer::Render()
 {
 	ID2D1DeviceContext* context = m_deviceResources->GetD2DDeviceContext();
@@ -81,7 +81,7 @@ void SampleFpsTextRenderer::Render()
 	context->SaveDrawingState(m_stateBlock.Get());
 	context->BeginDraw();
 
-	// Position on the bottom right corner
+	// Положение в правом нижнем углу
 	D2D1::Matrix3x2F screenTranslation = D2D1::Matrix3x2F::Translation(
 		logicalSize.Width - m_textMetrics.layoutWidth,
 		logicalSize.Height - m_textMetrics.height
@@ -99,8 +99,8 @@ void SampleFpsTextRenderer::Render()
 		m_whiteBrush.Get()
 		);
 
-	// Ignore D2DERR_RECREATE_TARGET here. This error indicates that the device
-	// is lost. It will be handled during the next call to Present.
+	// Пропустите здесь D2DERR_RECREATE_TARGET. Эта ошибка указывает, что устройство
+	// потеряно. Она будет обработана при следующем вызове Present.
 	HRESULT hr = context->EndDraw();
 	if (hr != D2DERR_RECREATE_TARGET)
 	{

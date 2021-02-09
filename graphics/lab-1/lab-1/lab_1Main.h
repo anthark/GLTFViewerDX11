@@ -5,7 +5,7 @@
 #include "Content\Sample3DSceneRenderer.h"
 #include "Content\SampleFpsTextRenderer.h"
 
-// Renders Direct2D and 3D content on the screen.
+// Прорисовывает содержимое Direct2D и 3D на экране.
 namespace lab_1
 {
 	class lab_1Main : public DX::IDeviceNotify
@@ -22,14 +22,14 @@ namespace lab_1
 		virtual void OnDeviceRestored();
 
 	private:
-		// Cached pointer to device resources.
+		// Кэшированный указатель на ресурсы устройства.
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
 
-		// TODO: Replace with your own content renderers.
+		// TODO: замените это собственными визуализаторами содержимого.
 		std::unique_ptr<Sample3DSceneRenderer> m_sceneRenderer;
 		std::unique_ptr<SampleFpsTextRenderer> m_fpsTextRenderer;
 
-		// Rendering loop timer.
+		// Таймер цикла прорисовки.
 		DX::StepTimer m_timer;
 	};
 }

@@ -2,7 +2,7 @@
 
 namespace lab_1
 {
-	// Constant buffer used to send MVP matrices to the vertex shader.
+	// Буфер констант, используемый для отправки матриц MVP в шейдер вершин.
 	struct ModelViewProjectionConstantBuffer
 	{
 		DirectX::XMFLOAT4X4 model;
@@ -10,7 +10,7 @@ namespace lab_1
 		DirectX::XMFLOAT4X4 projection;
 	};
 
-	// Used to send per-vertex data to the vertex shader.
+	// Используется для отправки данных отдельных вершин в шейдер вершин.
 	struct VertexPositionColor
 	{
 		DirectX::XMFLOAT3 pos;

@@ -15,7 +15,7 @@ using namespace Windows::System;
 using namespace Windows::Foundation;
 using namespace Windows::Graphics::Display;
 
-// The main function is only used to initialize our IFrameworkView class.
+// Функция main используется только для инициализации класса IFrameworkView.
 [Platform::MTAThread]
 int main(Platform::Array<Platform::String^>^)
 {
@@ -35,11 +35,11 @@ App::App() :
 {
 }
 
-// The first method called when the IFrameworkView is being created.
+// Первый метод, вызванный при создании IFrameworkView.
 void App::Initialize(CoreApplicationView^ applicationView)
 {
-	// Register event handlers for app lifecycle. This example includes Activated, so that we
-	// can make the CoreWindow active and start rendering on the window.
+	// Зарегистрируйте обработчики событий для жизненного цикла приложения. Этот пример включает событие Activated, чтобы
+	// можно было сделать объект CoreWindow активным и запустить прорисовку в окне.
 	applicationView->Activated +=
 		ref new TypedEventHandler<CoreApplicationView^, IActivatedEventArgs^>(this, &App::OnActivated);
 
@@ -49,12 +49,12 @@ void App::Initialize(CoreApplicationView^ applicationView)
 	CoreApplication::Resuming +=
 		ref new EventHandler<Platform::Object^>(this, &App::OnResuming);
 
-	// At this point we have access to the device. 
-	// We can create the device-dependent resources.
+	// На этом этапе у нас есть доступ к устройству. 
+	// Мы можем создавать ресурсы, зависящие от устройства.
 	m_deviceResources = std::make_shared<DX::DeviceResources>();
 }
 
-// Called when the CoreWindow object is created (or re-created).
+// Вызывается при создании (или повторном создании) объекта CoreWindow.
 void App::SetWindow(CoreWindow^ window)
 {
 	window->SizeChanged += 
@@ -80,7 +80,7 @@ void App::SetWindow(CoreWindow^ window)
 	m_deviceResources->SetWindow(window);
 }
 
-// Initializes scene resources, or loads a previously saved app state.
+// Инициализирует ресурсы сцены или загружает ранее сохраненное состояние приложения.
 void App::Load(Platform::String^ entryPoint)
 {
 	if (m_main == nullptr)
@@ -89,7 +89,7 @@ void App::Load(Platform::String^ entryPoint)
 	}
 }
 
-// This method is called after the window becomes active.
+// Этот метод вызывается после того, как окно становится активным.
 void App::Run()
 {
 	while (!m_windowClosed)
@@ -112,34 +112,34 @@ void App::Run()
 	}
 }
 
-// Required for IFrameworkView.
-// Terminate events do not cause Uninitialize to be called. It will be called if your IFrameworkView
-// class is torn down while the app is in the foreground.
+// Требуется для IFrameworkView.
+// События Terminate не приводят к вызову метода Uninitialize. Этот метод вызывается, если класс IFrameworkView
+// уничтожается, пока приложение находится на переднем плане.
 void App::Uninitialize()
 {
 }
 
-// Application lifecycle event handlers.
+// Обработчики событий жизненного цикла приложения.
 
 void App::OnActivated(CoreApplicationView^ applicationView, IActivatedEventArgs^ args)
 {
-	// Run() won't start until the CoreWindow is activated.
+	// Run() не запускается, пока не будет активирован объект CoreWindow.
 	CoreWindow::GetForCurrentThread()->Activate();
 }
 
 void App::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
 {
-	// Save app state asynchronously after requesting a deferral. Holding a deferral
-	// indicates that the application is busy performing suspending operations. Be
-	// aware that a deferral may not be held indefinitely. After about five seconds,
-	// the app will be forced to exit.
+	// Асинхронное сохранение состояния приложения после запроса задержки. Удержание задержки
+	// означает, что приложение занято выполнением приостановки операций. Обратите внимание,
+	// что задержку невозможно удерживать в течение долгого времени. Примерно через пять
+	// секунд произойдет принудительный выход из приложения.
 	SuspendingDeferral^ deferral = args->SuspendingOperation->GetDeferral();
 
 	create_task([this, deferral]()
 	{
         m_deviceResources->Trim();
 
-		// Insert your code here.
+		// Вставьте сюда свой код.
 
 		deferral->Complete();
 	});
@@ -147,14 +147,14 @@ void App::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
 
 void App::OnResuming(Platform::Object^ sender, Platform::Object^ args)
 {
-	// Restore any data or state that was unloaded on suspend. By default, data
-	// and state are persisted when resuming from suspend. Note that this event
-	// does not occur if the app was previously terminated.
+	// Восстановление всех данных и состояний, которые были выгружены при приостановке действия. По умолчанию данные
+	// и состояние сохраняются при возобновлении работы. Обратите внимание, что этого
+	// не происходит, если работа приложения была остановлена ранее.
 
-	// Insert your code here.
+	// Вставьте сюда свой код.
 }
 
-// Window event handlers.
+// Обработчики событий окна.
 
 void App::OnWindowSizeChanged(CoreWindow^ sender, WindowSizeChangedEventArgs^ args)
 {
@@ -172,14 +172,14 @@ void App::OnWindowClosed(CoreWindow^ sender, CoreWindowEventArgs^ args)
 	m_windowClosed = true;
 }
 
-// DisplayInformation event handlers.
+// Обработчики события DisplayInformation
 
 void App::OnDpiChanged(DisplayInformation^ sender, Object^ args)
 {
-	// Note: The value for LogicalDpi retrieved here may not match the effective DPI of the app
-	// if it is being scaled for high resolution devices. Once the DPI is set on DeviceResources,
-	// you should always retrieve it using the GetDpi method.
-	// See DeviceResources.cpp for more details.
+	// Примечание. Значение LogicalDpi, полученное здесь, может не соответствовать фактическому DPI приложения,
+	// если его масштаб изменяется для устройств с экраном высокого разрешения. После установки DPI в DeviceResources,
+	// всегда следует получать его с помощью метода GetDpi.
+	// См. DeviceResources.cpp для получения дополнительных сведений.
 	m_deviceResources->SetDpi(sender->LogicalDpi);
 	m_main->CreateWindowSizeDependentResources();
 }

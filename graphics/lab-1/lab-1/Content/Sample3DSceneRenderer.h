@@ -6,7 +6,7 @@
 
 namespace lab_1
 {
-	// This sample renderer instantiates a basic rendering pipeline.
+	// Этот пример визуализатора создает экземпляр базового конвейера прорисовки.
 	class Sample3DSceneRenderer
 	{
 	public:
@@ -26,10 +26,10 @@ namespace lab_1
 		void Rotate(float radians);
 
 	private:
-		// Cached pointer to device resources.
+		// Кэшированный указатель на ресурсы устройства.
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
 
-		// Direct3D resources for cube geometry.
+		// Ресурсы Direct3D для геометрии куба.
 		Microsoft::WRL::ComPtr<ID3D11InputLayout>	m_inputLayout;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_vertexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_indexBuffer;
@@ -37,11 +37,11 @@ namespace lab_1
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_pixelShader;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_constantBuffer;
 
-		// System resources for cube geometry.
+		// Системные ресурсы для геометрии куба.
 		ModelViewProjectionConstantBuffer	m_constantBufferData;
 		uint32	m_indexCount;
 
-		// Variables used with the rendering loop.
+		// Переменные, используемые с циклом прорисовки.
 		bool	m_loadingComplete;
 		float	m_degreesPerSecond;
 		bool	m_tracking;

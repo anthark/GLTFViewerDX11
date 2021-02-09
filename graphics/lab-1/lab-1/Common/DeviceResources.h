@@ -2,14 +2,14 @@
 
 namespace DX
 {
-	// Provides an interface for an application that owns DeviceResources to be notified of the device being lost or created.
+	// Предоставляет интерфейс, позволяющий владеющему DeviceResources приложению получать уведомления о потере или создании устройства.
 	interface IDeviceNotify
 	{
 		virtual void OnDeviceLost() = 0;
 		virtual void OnDeviceRestored() = 0;
 	};
 
-	// Controls all the DirectX device resources.
+	// Управляет всеми ресурсами устройств DirectX.
 	class DeviceResources
 	{
 	public:
@@ -24,14 +24,14 @@ namespace DX
 		void Trim();
 		void Present();
 
-		// The size of the render target, in pixels.
+		// Размер целевого объекта отрисовки в пикселях.
 		Windows::Foundation::Size	GetOutputSize() const					{ return m_outputSize; }
 
-		// The size of the render target, in dips.
+		// Размер целевого объекта отрисовки в аппаратно-независимых пикселях (DIP).
 		Windows::Foundation::Size	GetLogicalSize() const					{ return m_logicalSize; }
 		float						GetDpi() const							{ return m_effectiveDpi; }
 
-		// D3D Accessors.
+		// Методы доступа к D3D.
 		ID3D11Device3*				GetD3DDevice() const					{ return m_d3dDevice.Get(); }
 		ID3D11DeviceContext3*		GetD3DDeviceContext() const				{ return m_d3dContext.Get(); }
 		IDXGISwapChain3*			GetSwapChain() const					{ return m_swapChain.Get(); }
@@ -41,7 +41,7 @@ namespace DX
 		D3D11_VIEWPORT				GetScreenViewport() const				{ return m_screenViewport; }
 		DirectX::XMFLOAT4X4			GetOrientationTransform3D() const		{ return m_orientationTransform3D; }
 
-		// D2D Accessors.
+		// Методы доступа к D2D.
 		ID2D1Factory3*				GetD2DFactory() const					{ return m_d2dFactory.Get(); }
 		ID2D1Device2*				GetD2DDevice() const					{ return m_d2dDevice.Get(); }
 		ID2D1DeviceContext2*		GetD2DDeviceContext() const				{ return m_d2dContext.Get(); }
@@ -57,30 +57,30 @@ namespace DX
 		void UpdateRenderTargetSize();
 		DXGI_MODE_ROTATION ComputeDisplayRotation();
 
-		// Direct3D objects.
+		// Объекты Direct3D.
 		Microsoft::WRL::ComPtr<ID3D11Device3>			m_d3dDevice;
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext3>	m_d3dContext;
 		Microsoft::WRL::ComPtr<IDXGISwapChain3>			m_swapChain;
 
-		// Direct3D rendering objects. Required for 3D.
+		// Объекты прорисовки Direct3D. Требуются для трехмерной прорисовки.
 		Microsoft::WRL::ComPtr<ID3D11RenderTargetView1>	m_d3dRenderTargetView;
 		Microsoft::WRL::ComPtr<ID3D11DepthStencilView>	m_d3dDepthStencilView;
 		D3D11_VIEWPORT									m_screenViewport;
 
-		// Direct2D drawing components.
+		// Компоненты рисования Direct2D.
 		Microsoft::WRL::ComPtr<ID2D1Factory3>		m_d2dFactory;
 		Microsoft::WRL::ComPtr<ID2D1Device2>		m_d2dDevice;
 		Microsoft::WRL::ComPtr<ID2D1DeviceContext2>	m_d2dContext;
 		Microsoft::WRL::ComPtr<ID2D1Bitmap1>		m_d2dTargetBitmap;
 
-		// DirectWrite drawing components.
+		// Компоненты рисования DirectWrite.
 		Microsoft::WRL::ComPtr<IDWriteFactory3>		m_dwriteFactory;
 		Microsoft::WRL::ComPtr<IWICImagingFactory2>	m_wicFactory;
 
-		// Cached reference to the Window.
+		// Кэшированная ссылка на окно.
 		Platform::Agile<Windows::UI::Core::CoreWindow> m_window;
 
-		// Cached device properties.
+		// Кэшированные свойства устройств.
 		D3D_FEATURE_LEVEL								m_d3dFeatureLevel;
 		Windows::Foundation::Size						m_d3dRenderTargetSize;
 		Windows::Foundation::Size						m_outputSize;
@@ -89,14 +89,14 @@ namespace DX
 		Windows::Graphics::Display::DisplayOrientations	m_currentOrientation;
 		float											m_dpi;
 
-		// This is the DPI that will be reported back to the app. It takes into account whether the app supports high resolution screens or not.
+		// Это то значение DPI, которое будет передаваться обратно в приложение. При этом учитывается, поддерживает ли приложение экраны высокого разрешения или нет.
 		float m_effectiveDpi;
 
-		// Transforms used for display orientation.
+		// Преобразования, используемые для ориентации экрана.
 		D2D1::Matrix3x2F	m_orientationTransform2D;
 		DirectX::XMFLOAT4X4	m_orientationTransform3D;
 
-		// The IDeviceNotify can be held directly as it owns the DeviceResources.
+		// Объект IDeviceNotify можно сохранять напрямую, так как он владеет DeviceResources.
 		IDeviceNotify* m_deviceNotify;
 	};
 }

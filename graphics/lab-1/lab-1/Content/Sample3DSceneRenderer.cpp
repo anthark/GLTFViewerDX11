@@ -8,7 +8,7 @@ using namespace lab_1;
 using namespace DirectX;
 using namespace Windows::Foundation;
 
-// Loads vertex and pixel shaders from files and instantiates the cube geometry.
+// Загружает шейдеры вершин и пикселей из файлов и создает геометрию куба.
 Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources) :
 	m_loadingComplete(false),
 	m_degreesPerSecond(45),
@@ -20,27 +20,27 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 	CreateWindowSizeDependentResources();
 }
 
-// Initializes view parameters when the window size changes.
+// Инициализирует параметры представления при изменении размера окна.
 void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 {
 	Size outputSize = m_deviceResources->GetOutputSize();
 	float aspectRatio = outputSize.Width / outputSize.Height;
 	float fovAngleY = 70.0f * XM_PI / 180.0f;
 
-	// This is a simple example of change that can be made when the app is in
-	// portrait or snapped view.
+	// Это простой пример изменения, которое можно реализовать, когда приложение находится в
+	// книжном или прикрепленном представлении.
 	if (aspectRatio < 1.0f)
 	{
 		fovAngleY *= 2.0f;
 	}
 
-	// Note that the OrientationTransform3D matrix is post-multiplied here
-	// in order to correctly orient the scene to match the display orientation.
-	// This post-multiplication step is required for any draw calls that are
-	// made to the swap chain render target. For draw calls to other targets,
-	// this transform should not be applied.
+	// Обратите внимание, что матрица OrientationTransform3D подвергается здесь дополнительному умножению,
+	// чтобы правильно сориентировать сцену в соответствии с ориентацией экрана.
+	// Это умножение является обязательным для всех вызовов draw,
+	// предназначенных для целевого объекта в цепочке буферов. В случае вызовов draw для других целевых объектов
+	// это преобразование не должно применяться.
 
-	// This sample makes use of a right-handed coordinate system using row-major matrices.
+	// В этом примере используется правая система координат на базе матриц с развертыванием по столбцам.
 	XMMATRIX perspectiveMatrix = XMMatrixPerspectiveFovRH(
 		fovAngleY,
 		aspectRatio,
@@ -57,7 +57,7 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 		XMMatrixTranspose(perspectiveMatrix * orientationMatrix)
 		);
 
-	// Eye is at (0,0.7,1.5), looking at point (0,-0.1,0) with the up-vector along the y-axis.
+	// Наблюдатель находится в точке (0,0.7,1.5) и смотрит в точку (0,-0.1,0), а вектор вертикали направлен вдоль оси Y.
 	static const XMVECTORF32 eye = { 0.0f, 0.7f, 1.5f, 0.0f };
 	static const XMVECTORF32 at = { 0.0f, -0.1f, 0.0f, 0.0f };
 	static const XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
@@ -65,12 +65,12 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 	XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixLookAtRH(eye, at, up)));
 }
 
-// Called once per frame, rotates the cube and calculates the model and view matrices.
+// Вызывается по одному разу для каждого кадра, поворачивает куб и рассчитывает матрицы модели и представления.
 void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 {
 	if (!m_tracking)
 	{
-		// Convert degrees to radians, then convert seconds to rotation angle
+		// Преобразование градусов в радианы с последующим преобразованием секунд в угол поворота
 		float radiansPerSecond = XMConvertToRadians(m_degreesPerSecond);
 		double totalRotation = timer.GetTotalSeconds() * radiansPerSecond;
 		float radians = static_cast<float>(fmod(totalRotation, XM_2PI));
@@ -79,10 +79,10 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 	}
 }
 
-// Rotate the 3D cube model a set amount of radians.
+// Поворот модели трехмерного куба на заданный угол в радианах.
 void Sample3DSceneRenderer::Rotate(float radians)
 {
-	// Prepare to pass the updated model matrix to the shader
+	// Подготовка к передаче обновленной матрицы модели шейдеру
 	XMStoreFloat4x4(&m_constantBufferData.model, XMMatrixTranspose(XMMatrixRotationY(radians)));
 }
 
@@ -91,7 +91,7 @@ void Sample3DSceneRenderer::StartTracking()
 	m_tracking = true;
 }
 
-// When tracking, the 3D cube can be rotated around its Y axis by tracking pointer position relative to the output screen width.
+// При отслеживании трехмерный куб можно вращать вокруг его оси Y, следя за положением указателя относительно ширины экрана вывода.
 void Sample3DSceneRenderer::TrackingUpdate(float positionX)
 {
 	if (m_tracking)
@@ -106,10 +106,10 @@ void Sample3DSceneRenderer::StopTracking()
 	m_tracking = false;
 }
 
-// Renders one frame using the vertex and pixel shaders.
+// Прорисовывает один кадр с помощью шейдеров вершин и пикселей.
 void Sample3DSceneRenderer::Render()
 {
-	// Loading is asynchronous. Only draw geometry after it's loaded.
+	// Загрузка является асинхронной. Геометрию можно рисовать только после ее загрузки.
 	if (!m_loadingComplete)
 	{
 		return;
@@ -117,7 +117,7 @@ void Sample3DSceneRenderer::Render()
 
 	auto context = m_deviceResources->GetD3DDeviceContext();
 
-	// Prepare the constant buffer to send it to the graphics device.
+	// Подготовка буфера констант для передачи графическому устройству.
 	context->UpdateSubresource1(
 		m_constantBuffer.Get(),
 		0,
@@ -128,7 +128,7 @@ void Sample3DSceneRenderer::Render()
 		0
 		);
 
-	// Each vertex is one instance of the VertexPositionColor struct.
+	// Каждая вершина представляет собой экземпляр структуры VertexPositionColor.
 	UINT stride = sizeof(VertexPositionColor);
 	UINT offset = 0;
 	context->IASetVertexBuffers(
@@ -141,7 +141,7 @@ void Sample3DSceneRenderer::Render()
 
 	context->IASetIndexBuffer(
 		m_indexBuffer.Get(),
-		DXGI_FORMAT_R16_UINT, // Each index is one 16-bit unsigned integer (short).
+		DXGI_FORMAT_R16_UINT, // Каждый индекс представляет собой 16-разрядное целое число без знаков (короткое).
 		0
 		);
 
@@ -149,14 +149,14 @@ void Sample3DSceneRenderer::Render()
 
 	context->IASetInputLayout(m_inputLayout.Get());
 
-	// Attach our vertex shader.
+	// Прикрепление шейдера вершин.
 	context->VSSetShader(
 		m_vertexShader.Get(),
 		nullptr,
 		0
 		);
 
-	// Send the constant buffer to the graphics device.
+	// Передача буфера констант графическому устройству.
 	context->VSSetConstantBuffers1(
 		0,
 		1,
@@ -165,14 +165,14 @@ void Sample3DSceneRenderer::Render()
 		nullptr
 		);
 
-	// Attach our pixel shader.
+	// Прикрепление шейдера пикселей.
 	context->PSSetShader(
 		m_pixelShader.Get(),
 		nullptr,
 		0
 		);
 
-	// Draw the objects.
+	// Рисование объектов.
 	context->DrawIndexed(
 		m_indexCount,
 		0,
@@ -182,11 +182,11 @@ void Sample3DSceneRenderer::Render()
 
 void Sample3DSceneRenderer::CreateDeviceDependentResources()
 {
-	// Load shaders asynchronously.
+	// Асинхронная загрузка шейдеров.
 	auto loadVSTask = DX::ReadDataAsync(L"SampleVertexShader.cso");
 	auto loadPSTask = DX::ReadDataAsync(L"SamplePixelShader.cso");
 
-	// After the vertex shader file is loaded, create the shader and input layout.
+	// После загрузки файла шейдера вершин создаются шейдер и входной макет.
 	auto createVSTask = loadVSTask.then([this](const std::vector<byte>& fileData) {
 		DX::ThrowIfFailed(
 			m_deviceResources->GetD3DDevice()->CreateVertexShader(
@@ -214,7 +214,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 			);
 	});
 
-	// After the pixel shader file is loaded, create the shader and constant buffer.
+	// После загрузки файла шейдера пикселей создаются шейдер и буфер констант.
 	auto createPSTask = loadPSTask.then([this](const std::vector<byte>& fileData) {
 		DX::ThrowIfFailed(
 			m_deviceResources->GetD3DDevice()->CreatePixelShader(
@@ -235,10 +235,10 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 			);
 	});
 
-	// Once both shaders are loaded, create the mesh.
+	// После загрузки обоих шейдеров создайте сетку.
 	auto createCubeTask = (createPSTask && createVSTask).then([this] () {
 
-		// Load mesh vertices. Each vertex has a position and a color.
+		// Загрузка вершин сетки. У каждой вершины есть позиция и цвет.
 		static const VertexPositionColor cubeVertices[] = 
 		{
 			{XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, 0.0f)},
@@ -264,11 +264,11 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 				)
 			);
 
-		// Load mesh indices. Each trio of indices represents
-		// a triangle to be rendered on the screen.
-		// For example: 0,2,1 means that the vertices with indexes
-		// 0, 2 and 1 from the vertex buffer compose the 
-		// first triangle of this mesh.
+		// Загрузка индексов сетки. Каждая тройка индексов представляет
+		// треугольник для прорисовки на экране.
+		// Например: 0,2,1 означает, что вершины с индексами
+		// 0, 2 и 1 из буфера вершин составляют 
+		// первый треугольник этой сетки.
 		static const unsigned short cubeIndices [] =
 		{
 			0,2,1, // -x
@@ -306,7 +306,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 			);
 	});
 
-	// Once the cube is loaded, the object is ready to be rendered.
+	// После загрузки куба объект готов к отрисовке.
 	createCubeTask.then([this] () {
 		m_loadingComplete = true;
 	});

@@ -6,7 +6,7 @@
 
 namespace lab_1
 {
-	// Renders the current FPS value in the bottom right corner of the screen using Direct2D and DirectWrite.
+	// Прорисовывает текущее значение числа кадров в секунду в правом нижнем углу экрана с использованием Direct2D и DirectWrite.
 	class SampleFpsTextRenderer
 	{
 	public:
@@ -17,10 +17,10 @@ namespace lab_1
 		void Render();
 
 	private:
-		// Cached pointer to device resources.
+		// Кэшированный указатель на ресурсы устройства.
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
 
-		// Resources related to text rendering.
+		// Ресурсы, связанные с прорисовкой текста.
 		std::wstring                                    m_text;
 		DWRITE_TEXT_METRICS	                            m_textMetrics;
 		Microsoft::WRL::ComPtr<ID2D1SolidColorBrush>    m_whiteBrush;
