@@ -128,6 +128,93 @@ HRESULT CompileShaderFromFile(const WCHAR* szFileName, LPCSTR szEntryPoint, LPCS
 }
 
 
+HRESULT CreateViews(UINT width, UINT height)
+{
+    // Create a render target view
+    ID3D11Texture2D* pBackBuffer;
+    HRESULT hr = g_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&pBackBuffer));
+    if (FAILED(hr))
+        return hr;
+
+    hr = g_pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, &g_pRenderTargetView);
+    pBackBuffer->Release();
+    if (FAILED(hr))
+        return hr;
+
+    g_pd3dDeviceContext->OMSetRenderTargets(1, &g_pRenderTargetView, nullptr);
+
+    // Setup the viewport
+    D3D11_VIEWPORT vp;
+    vp.Width = (FLOAT)width;
+    vp.Height = (FLOAT)height;
+    vp.MinDepth = 0.0f;
+    vp.MaxDepth = 1.0f;
+    vp.TopLeftX = 0;
+    vp.TopLeftY = 0;
+    g_pd3dDeviceContext->RSSetViewports(1, &vp);
+
+    return S_OK;
+}
+
+
+HRESULT CreateShaders()
+{
+    ID3DBlob* pVSBlob = nullptr;
+    ID3DBlob* pPSBlob = nullptr;
+
+    HRESULT hr = CompileShaderFromFile(L"shaders.hlsl", "vs_main", "vs_5_0", &pVSBlob);
+    if (FAILED(hr))
+        return hr;
+
+    // Create the vertex shader
+    hr = g_pd3dDevice->CreateVertexShader(pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), nullptr, &g_pVertexShader);
+    if (FAILED(hr))
+    {
+        pVSBlob->Release();
+        return hr;
+    }
+
+    // Define the input layout
+    D3D11_INPUT_ELEMENT_DESC layout[] =
+    {
+        { "POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
+    UINT numElements = ARRAYSIZE(layout);
+
+    // Create the input layout
+    hr = g_pd3dDevice->CreateInputLayout(layout, numElements, pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), &g_pInputLayout);
+    if (FAILED(hr))
+    {
+        pVSBlob->Release();
+        return hr;
+    }
+
+    // Set the input layout
+    g_pd3dDeviceContext->IASetInputLayout(g_pInputLayout);
+
+    hr = CompileShaderFromFile(L"shaders.hlsl", "ps_main", "ps_5_0", &pPSBlob);
+    if (FAILED(hr))
+    {
+        pVSBlob->Release();
+        return hr;
+    }
+
+    // Create the pixel shader
+    hr = g_pd3dDevice->CreatePixelShader(pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), nullptr, &g_pPixelShader);
+    if (FAILED(hr))
+    {
+        pVSBlob->Release();
+        pPSBlob->Release();
+        return hr;
+    }
+
+    g_pd3dDeviceContext->VSSetShader(g_pVertexShader, nullptr, 0);
+    g_pd3dDeviceContext->PSSetShader(g_pPixelShader, nullptr, 0);
+
+    return S_OK;
+}
+
+
 HRESULT InitDevice()
 {
     HRESULT hr = S_OK;
@@ -189,9 +276,9 @@ HRESULT InitDevice()
     // Create swap chain
     DXGI_SWAP_CHAIN_DESC sd;
     ZeroMemory(&sd, sizeof(sd));
-    sd.BufferCount = 1;
-    sd.BufferDesc.Width = width;
-    sd.BufferDesc.Height = height;
+    sd.BufferCount = 2;
+    sd.BufferDesc.Width = 0;
+    sd.BufferDesc.Height = 0;
     sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     sd.BufferDesc.RefreshRate.Numerator = 60;
     sd.BufferDesc.RefreshRate.Denominator = 1;
@@ -200,77 +287,22 @@ HRESULT InitDevice()
     sd.SampleDesc.Count = 1;
     sd.SampleDesc.Quality = 0;
     sd.Windowed = TRUE;
+    sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
     hr = dxgiFactory->CreateSwapChain(g_pd3dDevice, &sd, &g_pSwapChain);
 
+    dxgiFactory->MakeWindowAssociation(g_hwnd, DXGI_MWA_NO_ALT_ENTER);
     dxgiFactory->Release();
 
     if (FAILED(hr))
         return hr;
 
-    // Create a render target view
-    ID3D11Texture2D* pBackBuffer = nullptr;
-    hr = g_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&pBackBuffer));
+    hr = CreateViews(width, height);
     if (FAILED(hr))
         return hr;
 
-    hr = g_pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, &g_pRenderTargetView);
-    pBackBuffer->Release();
-    if (FAILED(hr))
-        return hr;
-
-    g_pd3dDeviceContext->OMSetRenderTargets(1, &g_pRenderTargetView, nullptr);
-
-    // Setup the viewport
-    D3D11_VIEWPORT vp;
-    vp.Width = (FLOAT)width;
-    vp.Height = (FLOAT)height;
-    vp.MinDepth = 0.0f;
-    vp.MaxDepth = 1.0f;
-    vp.TopLeftX = 0;
-    vp.TopLeftY = 0;
-    g_pd3dDeviceContext->RSSetViewports(1, &vp);
-
-    // Compile the vertex shader
-    ID3DBlob* pVSBlob = nullptr;
-    hr = CompileShaderFromFile(L"shaders.hlsl", "vs_main", "vs_5_0", &pVSBlob);
-    if (FAILED(hr))
-        return hr;
-
-    // Create the vertex shader
-    hr = g_pd3dDevice->CreateVertexShader(pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), nullptr, &g_pVertexShader);
-    if (FAILED(hr))
-    {
-        pVSBlob->Release();
-        return hr;
-    }
-
-    // Define the input layout
-    D3D11_INPUT_ELEMENT_DESC layout[] =
-    {
-        { "POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-    };
-    UINT numElements = ARRAYSIZE(layout);
-
-    // Create the input layout
-    hr = g_pd3dDevice->CreateInputLayout(layout, numElements, pVSBlob->GetBufferPointer(),
-        pVSBlob->GetBufferSize(), &g_pInputLayout);
-    pVSBlob->Release();
-    if (FAILED(hr))
-        return hr;
-
-    // Set the input layout
-    g_pd3dDeviceContext->IASetInputLayout(g_pInputLayout);
-
-    // Compile the pixel shader
-    ID3DBlob* pPSBlob = nullptr;
-    hr = CompileShaderFromFile(L"shaders.hlsl", "ps_main", "ps_5_0", &pPSBlob);
-    if (FAILED(hr))
-         return hr;
-
-    // Create the pixel shader
-    hr = g_pd3dDevice->CreatePixelShader(pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), nullptr, &g_pPixelShader);
-    pPSBlob->Release();
+    // Create the vertex and pixel shaders
+    hr = CreateShaders();
     if (FAILED(hr))
         return hr;
 
@@ -294,14 +326,6 @@ HRESULT InitDevice()
     if (FAILED(hr))
         return hr;
 
-    // Set vertex buffer
-    UINT stride = sizeof(Vertex);
-    UINT offset = 0;
-    g_pd3dDeviceContext->IASetVertexBuffers(0, 1, &g_pVertexBuffer, &stride, &offset);
-
-    // Set primitive topology
-    g_pd3dDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
     return S_OK;
 }
 
@@ -315,20 +339,27 @@ void CleanupDevice()
     if (g_pPixelShader) g_pPixelShader->Release();
     if (g_pRenderTargetView) g_pRenderTargetView->Release();
     if (g_pSwapChain) g_pSwapChain->Release();
+    if (g_pd3dDeviceContext) g_pd3dDeviceContext->Release();
     if (g_pd3dDevice) g_pd3dDevice->Release();
 }
 
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    PAINTSTRUCT ps;
-    HDC hdc;
-
+    HRESULT hr;
     switch (uMsg)
     {
-    case WM_PAINT:
-        hdc = BeginPaint(hwnd, &ps);
-        EndPaint(hwnd, &ps);
+    case WM_SIZE:
+        if (g_pSwapChain)
+        {
+            g_pd3dDeviceContext->OMSetRenderTargets(0, 0, 0);
+            if (g_pRenderTargetView) g_pRenderTargetView->Release();
+            hr = g_pSwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
+            if (SUCCEEDED(hr))
+                hr = CreateViews(LOWORD(lParam), HIWORD(lParam));
+            if (FAILED(hr))
+                PostQuitMessage(0);
+        }
         break;
     case WM_DESTROY:
         PostQuitMessage(0);
@@ -346,11 +377,19 @@ void Render()
     float background_colour[4] = { 0.3f, 0.5f, 0.7f, 1.0f };
     g_pd3dDeviceContext->ClearRenderTargetView(g_pRenderTargetView, background_colour);
 
+    // Set vertex buffer
+    UINT stride = sizeof(Vertex);
+    UINT offset = 0;
+    g_pd3dDeviceContext->IASetVertexBuffers(0, 1, &g_pVertexBuffer, &stride, &offset);
+
+    // Set primitive topology
+    g_pd3dDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
     // Render a triangle
-    g_pd3dDeviceContext->VSSetShader(g_pVertexShader, nullptr, 0);
-    g_pd3dDeviceContext->PSSetShader(g_pPixelShader, nullptr, 0);
     g_pd3dDeviceContext->Draw(3, 0);
 
     // Present the information rendered to the back buffer to the front buffer (the screen)
     g_pSwapChain->Present(0, 0);
+
+    g_pd3dDeviceContext->OMSetRenderTargets(1, &g_pRenderTargetView, nullptr);
 }
