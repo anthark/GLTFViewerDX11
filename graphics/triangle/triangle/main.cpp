@@ -16,6 +16,14 @@ struct Vertex
 };
 
 
+struct Transformation
+{
+    DirectX::XMMATRIX mWorld;
+    DirectX::XMMATRIX mView;
+    DirectX::XMMATRIX mProjection;
+};
+
+
 HWND g_hwnd = nullptr;
 D3D_DRIVER_TYPE g_driverType = D3D_DRIVER_TYPE_NULL;
 D3D_FEATURE_LEVEL g_featureLevel = D3D_FEATURE_LEVEL_11_0;
@@ -27,6 +35,11 @@ ID3D11VertexShader* g_pVertexShader = nullptr;
 ID3D11PixelShader* g_pPixelShader = nullptr;
 ID3D11InputLayout* g_pInputLayout = nullptr;
 ID3D11Buffer* g_pVertexBuffer = nullptr;
+ID3D11Buffer* g_pTransformBuffer = nullptr;
+ID3D11Buffer* g_pIndexBuffer = nullptr;
+DirectX::XMMATRIX g_World;
+DirectX::XMMATRIX g_View;
+DirectX::XMMATRIX g_Projection;
 
 
 HRESULT InitWindow(HINSTANCE hInstance, int nCmdShow);
@@ -208,10 +221,23 @@ HRESULT CreateShaders()
         return hr;
     }
 
-    g_pd3dDeviceContext->VSSetShader(g_pVertexShader, nullptr, 0);
-    g_pd3dDeviceContext->PSSetShader(g_pPixelShader, nullptr, 0);
-
     return S_OK;
+}
+
+
+void InitMatrices(UINT width, UINT height)
+{
+    // Initialize the world matrix
+    g_World = DirectX::XMMatrixIdentity();
+    
+    // Initialize the view matrix
+    DirectX::XMVECTOR Eye = DirectX::XMVectorSet(0.0f, 0.0f, 1.5f, 0.0f);
+    DirectX::XMVECTOR At = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+    DirectX::XMVECTOR Up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+    g_View = DirectX::XMMatrixLookAtLH(Eye, At, Up);
+    
+    // Initialize the projection matrix
+    g_Projection = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, width / (FLOAT)height, 0.01f, 100.0f);
 }
 
 
@@ -224,7 +250,7 @@ HRESULT InitDevice()
     UINT width = rc.right - rc.left;
     UINT height = rc.bottom - rc.top;
 
-	// Enabling debig layer
+	// Debug layer enabling
 	UINT createDeviceFlags = 0;
 #if defined(_DEBUG)
 	// If the project is in a debug build, enable the debug layer.
@@ -330,7 +356,32 @@ HRESULT InitDevice()
     hr = g_pd3dDevice->CreateBuffer(&bd, &InitData, &g_pVertexBuffer);
     if (FAILED(hr))
         return hr;
-
+    
+    // Create index buffer
+    WORD indices[] =
+    {
+        0, 1, 2,
+        2, 1, 0,
+    };
+    bd.Usage = D3D11_USAGE_DEFAULT;
+    bd.ByteWidth = sizeof(WORD) * 6;
+    bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    bd.CPUAccessFlags = 0;
+    InitData.pSysMem = indices;
+    hr = g_pd3dDevice->CreateBuffer(&bd, &InitData, &g_pIndexBuffer);
+    if (FAILED(hr))
+        return hr;
+    
+    bd.Usage = D3D11_USAGE_DEFAULT;
+    bd.ByteWidth = sizeof(Transformation);
+    bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    bd.CPUAccessFlags = 0;
+    hr = g_pd3dDevice->CreateBuffer(&bd, nullptr, &g_pTransformBuffer);
+    if (FAILED(hr))
+        return hr;
+    
+    InitMatrices(width, height);
+    
     return S_OK;
 }
 
@@ -339,6 +390,8 @@ void CleanupDevice()
 {
     if (g_pd3dDeviceContext) g_pd3dDeviceContext->ClearState();
     if (g_pVertexBuffer) g_pVertexBuffer->Release();
+    if (g_pTransformBuffer) g_pTransformBuffer->Release();
+    if (g_pIndexBuffer) g_pIndexBuffer->Release();
     if (g_pInputLayout) g_pInputLayout->Release();
     if (g_pVertexShader) g_pVertexShader->Release();
     if (g_pPixelShader) g_pPixelShader->Release();
@@ -378,6 +431,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 void Render()
 {
+    g_pd3dDeviceContext->OMSetRenderTargets(1, &g_pRenderTargetView, nullptr);
+    
     // Clear the back buffer 
     float background_colour[4] = { 0.3f, 0.5f, 0.7f, 1.0f };
     g_pd3dDeviceContext->ClearRenderTargetView(g_pRenderTargetView, background_colour);
@@ -386,15 +441,33 @@ void Render()
     UINT stride = sizeof(Vertex);
     UINT offset = 0;
     g_pd3dDeviceContext->IASetVertexBuffers(0, 1, &g_pVertexBuffer, &stride, &offset);
-
+    
+    // Set index buffer
+    g_pd3dDeviceContext->IASetIndexBuffer(g_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
+    
     // Set primitive topology
     g_pd3dDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
+    
+    static float t = 0.0f;
+    static ULONGLONG timeStart = 0;
+    ULONGLONG timeCur = GetTickCount64();
+    if (timeStart == 0)
+        timeStart = timeCur;
+    t = (timeCur - timeStart) / 1000.0f;
+    g_World = DirectX::XMMatrixRotationY(t);
+    
+    Transformation tr;
+    tr.mWorld = XMMatrixTranspose(g_World);
+    tr.mView = XMMatrixTranspose(g_View);
+    tr.mProjection = XMMatrixTranspose(g_Projection);
+    g_pd3dDeviceContext->UpdateSubresource(g_pTransformBuffer, 0, nullptr, &tr, 0, 0);
+    
     // Render a triangle
-    g_pd3dDeviceContext->Draw(3, 0);
+    g_pd3dDeviceContext->VSSetShader(g_pVertexShader, nullptr, 0);
+    g_pd3dDeviceContext->VSSetConstantBuffers(0, 1, &g_pTransformBuffer);
+    g_pd3dDeviceContext->PSSetShader(g_pPixelShader, nullptr, 0);
+    g_pd3dDeviceContext->DrawIndexed(6, 0, 0);
 
     // Present the information rendered to the back buffer to the front buffer (the screen)
     g_pSwapChain->Present(0, 0);
-
-    g_pd3dDeviceContext->OMSetRenderTargets(1, &g_pRenderTargetView, nullptr);
 }
