@@ -7,8 +7,9 @@
 #include <wrl/client.h>
 #include <d3d11.h>
 #include <dxgi.h>
-#include <d3dcompiler.h> 
+#include <d3dcompiler.h>
 #include <directxmath.h>
+#include <fstream>
 
 
 struct Vertex
@@ -112,22 +113,22 @@ HRESULT InitWindow(HINSTANCE hInstance, int nCmdShow)
 }
 
 
-HRESULT CompileShaderFromFile(const WCHAR* szFileName, LPCSTR szEntryPoint, LPCSTR szShaderModel, ID3DBlob** ppBlobOut)
+HRESULT ReadCompiledShader(const WCHAR* szFileName, BYTE* bytes, size_t &bufferSize)
 {
-    HRESULT hr = S_OK;
+    std::ifstream csoFile(szFileName, std::ios::in | std::ios::binary | std::ios::ate);
 
-    DWORD dwShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
-
-    Microsoft::WRL::ComPtr<ID3DBlob> pErrorBlob;
-    hr = D3DCompileFromFile(szFileName, nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, szEntryPoint, szShaderModel, 
-        dwShaderFlags, 0, ppBlobOut, &pErrorBlob);
-    if (FAILED(hr)) 
+    if (csoFile.is_open())
     {
-        if (pErrorBlob)
-            OutputDebugStringA(reinterpret_cast<const char*>(pErrorBlob->GetBufferPointer()));
-        return hr;
+        bufferSize = (size_t)csoFile.tellg();
+        bytes = new BYTE[bufferSize];
+
+        csoFile.seekg(0, std::ios::beg);
+        csoFile.read(reinterpret_cast<char*>(bytes), bufferSize);
+        csoFile.close();
+
+        return S_OK;
     }
-    return S_OK;
+    return HRESULT_FROM_WIN32(GetLastError());
 }
 
 
@@ -159,17 +160,26 @@ HRESULT CreateViews(UINT width, UINT height)
 
 HRESULT CreateShaders()
 {
-    Microsoft::WRL::ComPtr<ID3DBlob> pVSBlob;
-    Microsoft::WRL::ComPtr<ID3DBlob> pPSBlob;
+    BYTE* bytes = nullptr;
+    HRESULT hr;
+    size_t bufferSize;
 
-    HRESULT hr = CompileShaderFromFile(L"shaders.hlsl", "vs_main", "vs_5_0", &pVSBlob);
+#if defined(DEBUG) || defined(_DEBUG)
+    hr = ReadCompiledShader(L"../Debug/VertexShader.cso", bytes, bufferSize);
+#else
+    hr = ReadCompiledShader(L"../Release/VertexShader.cso", bytes, bufferSize);
+#endif
+
     if (FAILED(hr))
         return hr;
 
     // Create the vertex shader
-    hr = g_pd3dDevice->CreateVertexShader(pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), nullptr, &g_pVertexShader);
+    hr = g_pd3dDevice->CreateVertexShader(bytes, bufferSize, nullptr, &g_pVertexShader);
     if (FAILED(hr))
+    {
+        delete[] bytes;
         return hr;
+    }
 
     // Define the input layout
     D3D11_INPUT_ELEMENT_DESC layout[] =
@@ -179,16 +189,23 @@ HRESULT CreateShaders()
     UINT numElements = ARRAYSIZE(layout);
 
     // Create the input layout
-    hr = g_pd3dDevice->CreateInputLayout(layout, numElements, pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), &g_pInputLayout);
+    hr = g_pd3dDevice->CreateInputLayout(layout, numElements, bytes, bufferSize, &g_pInputLayout);
+    delete[] bytes;
     if (FAILED(hr))
         return hr;
 
-    hr = CompileShaderFromFile(L"shaders.hlsl", "ps_main", "ps_5_0", &pPSBlob);
+#if defined(DEBUG) || defined(_DEBUG)
+    hr = ReadCompiledShader(L"../Debug/PixelShader.cso", bytes, bufferSize);
+#else
+    hr = ReadCompiledShader(L"../Release/PixelShader.cso", bytes, bufferSize);
+#endif
+
     if (FAILED(hr))
         return hr;
 
     // Create the pixel shader
-    hr = g_pd3dDevice->CreatePixelShader(pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), nullptr, &g_pPixelShader);
+    hr = g_pd3dDevice->CreatePixelShader(bytes, bufferSize, nullptr, &g_pPixelShader);
+    delete[] bytes;
     if (FAILED(hr))
         return hr;
 
