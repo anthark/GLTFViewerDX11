@@ -6,10 +6,12 @@
 #include <windows.h>
 #include <wrl/client.h>
 #include <d3d11.h>
+#include <d3d11_1.h>
 #include <dxgi.h>
 #include <d3dcompiler.h>
 #include <directxmath.h>
 #include <fstream>
+#include <string>
 
 
 struct Vertex
@@ -42,6 +44,7 @@ Microsoft::WRL::ComPtr<ID3D11Buffer> g_pIndexBuffer;
 DirectX::XMMATRIX g_World;
 DirectX::XMMATRIX g_View;
 DirectX::XMMATRIX g_Projection;
+Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> pAnnotation;
 
 
 HRESULT InitWindow(HINSTANCE hInstance, int nCmdShow);
@@ -153,6 +156,9 @@ HRESULT CreateViews(UINT width, UINT height)
     vp.TopLeftX = 0;
     vp.TopLeftY = 0;
     g_pd3dDeviceContext->RSSetViewports(1, &vp);
+
+	std::string textureName = "Back Buffer";
+	pBackBuffer->SetPrivateData(WKPDID_D3DDebugObjectName, textureName.size(), textureName.c_str());
 
     return S_OK;
 }
@@ -371,6 +377,10 @@ HRESULT InitDevice()
     
     InitMatrices(width, height);
     
+	hr = g_pd3dDeviceContext->QueryInterface(IID_PPV_ARGS(&pAnnotation));
+	if (FAILED(hr))
+		return hr;
+
     return S_OK;
 }
 
@@ -406,6 +416,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 void Render()
 {
+	pAnnotation->BeginEvent(L"Start rendering");
     // Clear the back buffer 
     float background_colour[4] = { 0.3f, 0.5f, 0.7f, 1.0f };
     g_pd3dDeviceContext->ClearRenderTargetView(g_pRenderTargetView.Get(), background_colour);
@@ -447,4 +458,6 @@ void Render()
 
     // Present the information rendered to the back buffer to the front buffer (the screen)
     g_pSwapChain->Present(1, 0);
+
+	pAnnotation->EndEvent();
 }
