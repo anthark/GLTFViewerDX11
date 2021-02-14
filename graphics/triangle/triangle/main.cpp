@@ -154,8 +154,6 @@ HRESULT CreateViews(UINT width, UINT height)
     if (FAILED(hr))
         return hr;
 
-    g_pd3dDeviceContext->OMSetRenderTargets(1, &g_pRenderTargetView, nullptr);
-
     // Setup the viewport
     D3D11_VIEWPORT vp;
     vp.Width = (FLOAT)width;
@@ -201,9 +199,6 @@ HRESULT CreateShaders()
         pVSBlob->Release();
         return hr;
     }
-
-    // Set the input layout
-    g_pd3dDeviceContext->IASetInputLayout(g_pInputLayout);
 
     hr = CompileShaderFromFile(L"shaders.hlsl", "ps_main", "ps_5_0", &pPSBlob);
     if (FAILED(hr))
@@ -431,11 +426,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 void Render()
 {
-    g_pd3dDeviceContext->OMSetRenderTargets(1, &g_pRenderTargetView, nullptr);
-    
     // Clear the back buffer 
     float background_colour[4] = { 0.3f, 0.5f, 0.7f, 1.0f };
     g_pd3dDeviceContext->ClearRenderTargetView(g_pRenderTargetView, background_colour);
+
+    g_pd3dDeviceContext->OMSetRenderTargets(1, &g_pRenderTargetView, nullptr);
 
     // Set vertex buffer
     UINT stride = sizeof(Vertex);
@@ -461,7 +456,9 @@ void Render()
     tr.mView = XMMatrixTranspose(g_View);
     tr.mProjection = XMMatrixTranspose(g_Projection);
     g_pd3dDeviceContext->UpdateSubresource(g_pTransformBuffer, 0, nullptr, &tr, 0, 0);
-    
+
+    g_pd3dDeviceContext->IASetInputLayout(g_pInputLayout);
+   
     // Render a triangle
     g_pd3dDeviceContext->VSSetShader(g_pVertexShader, nullptr, 0);
     g_pd3dDeviceContext->VSSetConstantBuffers(0, 1, &g_pTransformBuffer);
@@ -469,5 +466,5 @@ void Render()
     g_pd3dDeviceContext->DrawIndexed(6, 0, 0);
 
     // Present the information rendered to the back buffer to the front buffer (the screen)
-    g_pSwapChain->Present(0, 0);
+    g_pSwapChain->Present(1, 0);
 }
