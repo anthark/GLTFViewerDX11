@@ -223,7 +223,7 @@ HRESULT InitDevice()
 
 	// Debug layer enabling
 	UINT createDeviceFlags = 0;
-#if defined(_DEBUG)
+#if defined(DEBUG) || defined(_DEBUG)
 	// If the project is in a debug build, enable the debug layer.
 	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
