@@ -213,19 +213,25 @@ HRESULT CreateShaders()
 }
 
 
-void InitMatrices(UINT width, UINT height)
+void InitViewAndPerspective(UINT width, UINT height)
 {
-    // Initialize the world matrix
-    g_World = DirectX::XMMatrixIdentity();
-    
     // Initialize the view matrix
     DirectX::XMVECTOR Eye = DirectX::XMVectorSet(0.0f, 0.0f, 1.5f, 0.0f);
     DirectX::XMVECTOR At = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
     DirectX::XMVECTOR Up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
     g_View = DirectX::XMMatrixLookAtLH(Eye, At, Up);
-    
+
     // Initialize the projection matrix
     g_Projection = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, width / (FLOAT)height, 0.01f, 100.0f);
+}
+
+
+void InitMatrices(UINT width, UINT height)
+{
+    // Initialize the world matrix
+    g_World = DirectX::XMMatrixIdentity();
+    
+    InitViewAndPerspective(width, height);
 }
 
 
@@ -381,6 +387,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             g_pRenderTargetView = nullptr;
             g_pd3dDeviceContext->Flush();
             hr = g_pSwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
+            InitViewAndPerspective(LOWORD(lParam), HIWORD(lParam));
             if (SUCCEEDED(hr))
                 hr = CreateViews(LOWORD(lParam), HIWORD(lParam));
             if (FAILED(hr))
