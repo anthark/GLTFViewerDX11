@@ -4,6 +4,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <wrl/client.h>
 #include <d3d11.h>
 #include <dxgi.h>
 #include <d3dcompiler.h> 
@@ -27,16 +28,16 @@ struct Transformation
 HWND g_hwnd = nullptr;
 D3D_DRIVER_TYPE g_driverType = D3D_DRIVER_TYPE_NULL;
 D3D_FEATURE_LEVEL g_featureLevel = D3D_FEATURE_LEVEL_11_0;
-ID3D11Device* g_pd3dDevice = nullptr;
-ID3D11DeviceContext* g_pd3dDeviceContext = nullptr;
-IDXGISwapChain* g_pSwapChain = nullptr;
-ID3D11RenderTargetView* g_pRenderTargetView = nullptr;
-ID3D11VertexShader* g_pVertexShader = nullptr;
-ID3D11PixelShader* g_pPixelShader = nullptr;
-ID3D11InputLayout* g_pInputLayout = nullptr;
-ID3D11Buffer* g_pVertexBuffer = nullptr;
-ID3D11Buffer* g_pTransformBuffer = nullptr;
-ID3D11Buffer* g_pIndexBuffer = nullptr;
+Microsoft::WRL::ComPtr<ID3D11Device> g_pd3dDevice;
+Microsoft::WRL::ComPtr<ID3D11DeviceContext> g_pd3dDeviceContext;
+Microsoft::WRL::ComPtr<IDXGISwapChain> g_pSwapChain;
+Microsoft::WRL::ComPtr<ID3D11RenderTargetView> g_pRenderTargetView;
+Microsoft::WRL::ComPtr<ID3D11VertexShader> g_pVertexShader;
+Microsoft::WRL::ComPtr<ID3D11PixelShader> g_pPixelShader;
+Microsoft::WRL::ComPtr<ID3D11InputLayout> g_pInputLayout;
+Microsoft::WRL::ComPtr<ID3D11Buffer> g_pVertexBuffer;
+Microsoft::WRL::ComPtr<ID3D11Buffer> g_pTransformBuffer;
+Microsoft::WRL::ComPtr<ID3D11Buffer> g_pIndexBuffer;
 DirectX::XMMATRIX g_World;
 DirectX::XMMATRIX g_View;
 DirectX::XMMATRIX g_Projection;
@@ -44,7 +45,6 @@ DirectX::XMMATRIX g_Projection;
 
 HRESULT InitWindow(HINSTANCE hInstance, int nCmdShow);
 HRESULT InitDevice();
-void CleanupDevice();
 LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void Render();
 
@@ -58,10 +58,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
         return 0;
 
     if (FAILED(InitDevice()))
-    {
-        CleanupDevice();
         return 0;
-    }
 
     // Run the message loop.
 
@@ -78,8 +75,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
             Render();
         }
     }
-
-    CleanupDevice();
 
     return 0;
 }
@@ -123,20 +118,15 @@ HRESULT CompileShaderFromFile(const WCHAR* szFileName, LPCSTR szEntryPoint, LPCS
 
     DWORD dwShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
 
-    ID3DBlob* pErrorBlob = nullptr;
-    hr = D3DCompileFromFile(szFileName,nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, szEntryPoint, szShaderModel, 
+    Microsoft::WRL::ComPtr<ID3DBlob> pErrorBlob;
+    hr = D3DCompileFromFile(szFileName, nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, szEntryPoint, szShaderModel, 
         dwShaderFlags, 0, ppBlobOut, &pErrorBlob);
     if (FAILED(hr)) 
     {
         if (pErrorBlob)
-        {
             OutputDebugStringA(reinterpret_cast<const char*>(pErrorBlob->GetBufferPointer()));
-            pErrorBlob->Release();
-        }
         return hr;
     }
-    if (pErrorBlob) pErrorBlob->Release();
-
     return S_OK;
 }
 
@@ -144,13 +134,12 @@ HRESULT CompileShaderFromFile(const WCHAR* szFileName, LPCSTR szEntryPoint, LPCS
 HRESULT CreateViews(UINT width, UINT height)
 {
     // Create a render target view
-    ID3D11Texture2D* pBackBuffer;
-    HRESULT hr = g_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&pBackBuffer));
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> pBackBuffer;
+    HRESULT hr = g_pSwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
     if (FAILED(hr))
         return hr;
 
-    hr = g_pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, &g_pRenderTargetView);
-    pBackBuffer->Release();
+    hr = g_pd3dDevice->CreateRenderTargetView(pBackBuffer.Get(), nullptr, &g_pRenderTargetView);
     if (FAILED(hr))
         return hr;
 
@@ -170,8 +159,8 @@ HRESULT CreateViews(UINT width, UINT height)
 
 HRESULT CreateShaders()
 {
-    ID3DBlob* pVSBlob = nullptr;
-    ID3DBlob* pPSBlob = nullptr;
+    Microsoft::WRL::ComPtr<ID3DBlob> pVSBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> pPSBlob;
 
     HRESULT hr = CompileShaderFromFile(L"shaders.hlsl", "vs_main", "vs_5_0", &pVSBlob);
     if (FAILED(hr))
@@ -180,10 +169,7 @@ HRESULT CreateShaders()
     // Create the vertex shader
     hr = g_pd3dDevice->CreateVertexShader(pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), nullptr, &g_pVertexShader);
     if (FAILED(hr))
-    {
-        pVSBlob->Release();
         return hr;
-    }
 
     // Define the input layout
     D3D11_INPUT_ELEMENT_DESC layout[] =
@@ -195,26 +181,16 @@ HRESULT CreateShaders()
     // Create the input layout
     hr = g_pd3dDevice->CreateInputLayout(layout, numElements, pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), &g_pInputLayout);
     if (FAILED(hr))
-    {
-        pVSBlob->Release();
         return hr;
-    }
 
     hr = CompileShaderFromFile(L"shaders.hlsl", "ps_main", "ps_5_0", &pPSBlob);
     if (FAILED(hr))
-    {
-        pVSBlob->Release();
         return hr;
-    }
 
     // Create the pixel shader
     hr = g_pd3dDevice->CreatePixelShader(pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), nullptr, &g_pPixelShader);
     if (FAILED(hr))
-    {
-        pVSBlob->Release();
-        pPSBlob->Release();
         return hr;
-    }
 
     return S_OK;
 }
@@ -280,20 +256,16 @@ HRESULT InitDevice()
         return hr;
 
     // Obtain DXGI factory from device (since we used nullptr for pAdapter above)
-    IDXGIFactory1* dxgiFactory = nullptr;
+    Microsoft::WRL::ComPtr<IDXGIFactory1> dxgiFactory;
     {
-        IDXGIDevice* dxgiDevice = nullptr;
-        hr = g_pd3dDevice->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void**>(&dxgiDevice));
+        Microsoft::WRL::ComPtr<IDXGIDevice> dxgiDevice;
+        hr = g_pd3dDevice.As(&dxgiDevice);
         if (SUCCEEDED(hr))
         {
-            IDXGIAdapter* adapter = nullptr;
+            Microsoft::WRL::ComPtr<IDXGIAdapter> adapter;
             hr = dxgiDevice->GetAdapter(&adapter);
             if (SUCCEEDED(hr))
-            {
-                hr = adapter->GetParent(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&dxgiFactory));
-                adapter->Release();
-            }
-            dxgiDevice->Release();
+                hr = adapter->GetParent(IID_PPV_ARGS(&dxgiFactory));
         }
     }
     if (FAILED(hr))
@@ -315,10 +287,9 @@ HRESULT InitDevice()
     sd.Windowed = TRUE;
     sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
-    hr = dxgiFactory->CreateSwapChain(g_pd3dDevice, &sd, &g_pSwapChain);
+    hr = dxgiFactory->CreateSwapChain(g_pd3dDevice.Get(), &sd, &g_pSwapChain);
 
     dxgiFactory->MakeWindowAssociation(g_hwnd, DXGI_MWA_NO_ALT_ENTER);
-    dxgiFactory->Release();
 
     if (FAILED(hr))
         return hr;
@@ -381,22 +352,6 @@ HRESULT InitDevice()
 }
 
 
-void CleanupDevice()
-{
-    if (g_pd3dDeviceContext) g_pd3dDeviceContext->ClearState();
-    if (g_pVertexBuffer) g_pVertexBuffer->Release();
-    if (g_pTransformBuffer) g_pTransformBuffer->Release();
-    if (g_pIndexBuffer) g_pIndexBuffer->Release();
-    if (g_pInputLayout) g_pInputLayout->Release();
-    if (g_pVertexShader) g_pVertexShader->Release();
-    if (g_pPixelShader) g_pPixelShader->Release();
-    if (g_pRenderTargetView) g_pRenderTargetView->Release();
-    if (g_pSwapChain) g_pSwapChain->Release();
-    if (g_pd3dDeviceContext) g_pd3dDeviceContext->Release();
-    if (g_pd3dDevice) g_pd3dDevice->Release();
-}
-
-
 LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     HRESULT hr;
@@ -406,7 +361,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         if (g_pSwapChain)
         {
             g_pd3dDeviceContext->OMSetRenderTargets(0, 0, 0);
-            if (g_pRenderTargetView) g_pRenderTargetView->Release();
+            g_pRenderTargetView = nullptr;
+            g_pd3dDeviceContext->Flush();
             hr = g_pSwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
             if (SUCCEEDED(hr))
                 hr = CreateViews(LOWORD(lParam), HIWORD(lParam));
@@ -428,17 +384,17 @@ void Render()
 {
     // Clear the back buffer 
     float background_colour[4] = { 0.3f, 0.5f, 0.7f, 1.0f };
-    g_pd3dDeviceContext->ClearRenderTargetView(g_pRenderTargetView, background_colour);
+    g_pd3dDeviceContext->ClearRenderTargetView(g_pRenderTargetView.Get(), background_colour);
 
-    g_pd3dDeviceContext->OMSetRenderTargets(1, &g_pRenderTargetView, nullptr);
+    g_pd3dDeviceContext->OMSetRenderTargets(1, g_pRenderTargetView.GetAddressOf(), nullptr);
 
     // Set vertex buffer
     UINT stride = sizeof(Vertex);
     UINT offset = 0;
-    g_pd3dDeviceContext->IASetVertexBuffers(0, 1, &g_pVertexBuffer, &stride, &offset);
+    g_pd3dDeviceContext->IASetVertexBuffers(0, 1, g_pVertexBuffer.GetAddressOf(), &stride, &offset);
     
     // Set index buffer
-    g_pd3dDeviceContext->IASetIndexBuffer(g_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
+    g_pd3dDeviceContext->IASetIndexBuffer(g_pIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
     
     // Set primitive topology
     g_pd3dDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -455,14 +411,14 @@ void Render()
     tr.mWorld = XMMatrixTranspose(g_World);
     tr.mView = XMMatrixTranspose(g_View);
     tr.mProjection = XMMatrixTranspose(g_Projection);
-    g_pd3dDeviceContext->UpdateSubresource(g_pTransformBuffer, 0, nullptr, &tr, 0, 0);
+    g_pd3dDeviceContext->UpdateSubresource(g_pTransformBuffer.Get(), 0, nullptr, &tr, 0, 0);
 
-    g_pd3dDeviceContext->IASetInputLayout(g_pInputLayout);
+    g_pd3dDeviceContext->IASetInputLayout(g_pInputLayout.Get());
    
     // Render a triangle
-    g_pd3dDeviceContext->VSSetShader(g_pVertexShader, nullptr, 0);
-    g_pd3dDeviceContext->VSSetConstantBuffers(0, 1, &g_pTransformBuffer);
-    g_pd3dDeviceContext->PSSetShader(g_pPixelShader, nullptr, 0);
+    g_pd3dDeviceContext->VSSetShader(g_pVertexShader.Get(), nullptr, 0);
+    g_pd3dDeviceContext->VSSetConstantBuffers(0, 1, g_pTransformBuffer.GetAddressOf());
+    g_pd3dDeviceContext->PSSetShader(g_pPixelShader.Get(), nullptr, 0);
     g_pd3dDeviceContext->DrawIndexed(6, 0, 0);
 
     // Present the information rendered to the back buffer to the front buffer (the screen)
