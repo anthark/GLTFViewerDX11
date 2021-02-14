@@ -113,17 +113,17 @@ HRESULT InitWindow(HINSTANCE hInstance, int nCmdShow)
 }
 
 
-HRESULT ReadCompiledShader(const WCHAR* szFileName, BYTE* bytes, size_t &bufferSize)
+HRESULT ReadCompiledShader(const WCHAR* szFileName, BYTE** bytes, size_t &bufferSize)
 {
     std::ifstream csoFile(szFileName, std::ios::in | std::ios::binary | std::ios::ate);
 
     if (csoFile.is_open())
     {
         bufferSize = (size_t)csoFile.tellg();
-        bytes = new BYTE[bufferSize];
+        *bytes = new BYTE[bufferSize];
 
         csoFile.seekg(0, std::ios::beg);
-        csoFile.read(reinterpret_cast<char*>(bytes), bufferSize);
+        csoFile.read(reinterpret_cast<char*>(*bytes), bufferSize);
         csoFile.close();
 
         return S_OK;
@@ -165,9 +165,9 @@ HRESULT CreateShaders()
     size_t bufferSize;
 
 #if defined(DEBUG) || defined(_DEBUG)
-    hr = ReadCompiledShader(L"../Debug/VertexShader.cso", bytes, bufferSize);
+    hr = ReadCompiledShader(L"../Debug/VertexShader.cso", &bytes, bufferSize);
 #else
-    hr = ReadCompiledShader(L"../Release/VertexShader.cso", bytes, bufferSize);
+    hr = ReadCompiledShader(L"../Release/VertexShader.cso", &bytes, bufferSize);
 #endif
 
     if (FAILED(hr))
@@ -195,9 +195,9 @@ HRESULT CreateShaders()
         return hr;
 
 #if defined(DEBUG) || defined(_DEBUG)
-    hr = ReadCompiledShader(L"../Debug/PixelShader.cso", bytes, bufferSize);
+    hr = ReadCompiledShader(L"../Debug/PixelShader.cso", &bytes, bufferSize);
 #else
-    hr = ReadCompiledShader(L"../Release/PixelShader.cso", bytes, bufferSize);
+    hr = ReadCompiledShader(L"../Release/PixelShader.cso", &bytes, bufferSize);
 #endif
 
     if (FAILED(hr))
