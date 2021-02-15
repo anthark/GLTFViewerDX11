@@ -190,15 +190,15 @@ HRESULT CreateShaders()
 
 #if defined(DEBUG) || defined(_DEBUG)
 #ifdef ENVIRONMENT64
-    hr = ReadCompiledShader(L"../x64/Debug/VertexShader.cso", &bytes, bufferSize);
+    hr = ReadCompiledShader(L"../Debug_x64/VertexShader.cso", &bytes, bufferSize);
 #else
-    hr = ReadCompiledShader(L"../Debug/VertexShader.cso", &bytes, bufferSize);
+    hr = ReadCompiledShader(L"../Debug_Win32/VertexShader.cso", &bytes, bufferSize);
 #endif // ENVIRONMENT64
 #else
 #ifdef ENVIRONMENT64
-    hr = ReadCompiledShader(L"../x64/Release/VertexShader.cso", &bytes, bufferSize);
+    hr = ReadCompiledShader(L"../Release_x64/VertexShader.cso", &bytes, bufferSize);
 #else
-    hr = ReadCompiledShader(L"../Release/VertexShader.cso", &bytes, bufferSize);
+    hr = ReadCompiledShader(L"../Release_Win32/VertexShader.cso", &bytes, bufferSize);
 #endif // ENVIRONMENT64
 #endif // DEBUG
 
@@ -228,15 +228,15 @@ HRESULT CreateShaders()
 
 #if defined(DEBUG) || defined(_DEBUG)
 #ifdef ENVIRONMENT64
-    hr = ReadCompiledShader(L"../x64/Debug/PixelShader.cso", &bytes, bufferSize);
+    hr = ReadCompiledShader(L"../Debug_x64/PixelShader.cso", &bytes, bufferSize);
 #else
-    hr = ReadCompiledShader(L"../Debug/PixelShader.cso", &bytes, bufferSize);
+    hr = ReadCompiledShader(L"../Debug_Win32/PixelShader.cso", &bytes, bufferSize);
 #endif // ENVIRONMENT64
 #else
 #ifdef ENVIRONMENT64
-    hr = ReadCompiledShader(L"../x64/Release/PixelShader.cso", &bytes, bufferSize);
+    hr = ReadCompiledShader(L"../Release_x64/PixelShader.cso", &bytes, bufferSize);
 #else
-    hr = ReadCompiledShader(L"../Release/PixelShader.cso", &bytes, bufferSize);
+    hr = ReadCompiledShader(L"../Release_Win32/PixelShader.cso", &bytes, bufferSize);
 #endif // ENVIRONMENT64
 #endif // DEBUG
 
