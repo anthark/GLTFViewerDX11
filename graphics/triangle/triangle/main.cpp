@@ -1,6 +1,24 @@
 #ifndef UNICODE
 #define UNICODE
-#endif 
+#endif
+
+// Check windows
+#if _WIN32 || _WIN64
+#if _WIN64
+#define ENVIRONMENT64
+#else
+#define ENVIRONMENT32
+#endif
+#endif
+
+// Check GCC
+#if __GNUC__
+#if __x86_64__ || __ppc64__
+#define ENVIRONMENT64
+#else
+#define ENVIRONMENT32
+#endif
+#endif
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -158,7 +176,7 @@ HRESULT CreateViews(UINT width, UINT height)
     g_pd3dDeviceContext->RSSetViewports(1, &vp);
 
 	std::string textureName = "Back Buffer";
-	pBackBuffer->SetPrivateData(WKPDID_D3DDebugObjectName, textureName.size(), textureName.c_str());
+	pBackBuffer->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)textureName.size(), textureName.c_str());
 
     return S_OK;
 }
@@ -171,10 +189,18 @@ HRESULT CreateShaders()
     size_t bufferSize;
 
 #if defined(DEBUG) || defined(_DEBUG)
+#ifdef ENVIRONMENT64
+    hr = ReadCompiledShader(L"../x64/Debug/VertexShader.cso", &bytes, bufferSize);
+#else
     hr = ReadCompiledShader(L"../Debug/VertexShader.cso", &bytes, bufferSize);
+#endif // ENVIRONMENT64
+#else
+#ifdef ENVIRONMENT64
+    hr = ReadCompiledShader(L"../x64/Release/VertexShader.cso", &bytes, bufferSize);
 #else
     hr = ReadCompiledShader(L"../Release/VertexShader.cso", &bytes, bufferSize);
-#endif
+#endif // ENVIRONMENT64
+#endif // DEBUG
 
     if (FAILED(hr))
         return hr;
@@ -201,10 +227,18 @@ HRESULT CreateShaders()
         return hr;
 
 #if defined(DEBUG) || defined(_DEBUG)
+#ifdef ENVIRONMENT64
+    hr = ReadCompiledShader(L"../x64/Debug/PixelShader.cso", &bytes, bufferSize);
+#else
     hr = ReadCompiledShader(L"../Debug/PixelShader.cso", &bytes, bufferSize);
+#endif // ENVIRONMENT64
+#else
+#ifdef ENVIRONMENT64
+    hr = ReadCompiledShader(L"../x64/Release/PixelShader.cso", &bytes, bufferSize);
 #else
     hr = ReadCompiledShader(L"../Release/PixelShader.cso", &bytes, bufferSize);
-#endif
+#endif // ENVIRONMENT64
+#endif // DEBUG
 
     if (FAILED(hr))
         return hr;
