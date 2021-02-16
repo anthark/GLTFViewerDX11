@@ -33,5 +33,8 @@
 
 **/.vs
 **/*.vcxproj.user
-**/Debug
-**/Release
+**/Debug_*
+**/Release_*
+**/Debug*
+**/Release*
+**/x64s
