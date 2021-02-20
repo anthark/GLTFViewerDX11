@@ -13,20 +13,7 @@ Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources) :
 
 HRESULT Renderer::ReadCompiledShader(const WCHAR* szFileName, BYTE** bytes, size_t& bufferSize)
 {
-#if defined(DEBUG) || defined(_DEBUG)
-#ifdef ENVIRONMENT64
-    std::wstring prefix = L"../Debug_x64/";
-#else
-    std::wstring prefix = L"../Debug_Win32/";
-#endif // ENVIRONMENT64
-#else
-#ifdef ENVIRONMENT64
-    std::wstring prefix = L"../Release_x64/";
-#else
-    std::wstring prefix = L"../Release_Win32/";
-#endif // ENVIRONMENT64
-#endif // DEBUG
-    std::ifstream csoFile(prefix + szFileName, std::ios::in | std::ios::binary | std::ios::ate);
+    std::ifstream csoFile(szFileName, std::ios::in | std::ios::binary | std::ios::ate);
 
     if (csoFile.is_open())
     {
