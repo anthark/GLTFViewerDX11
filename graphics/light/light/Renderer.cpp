@@ -3,6 +3,7 @@
 #include <fstream>
 
 #include "Renderer.h"
+#include "DDSTextureLoader11.h"
 
 Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources) :
     m_pDeviceResources(deviceResources),
@@ -53,6 +54,7 @@ HRESULT Renderer::CreateShaders()
     D3D11_INPUT_ELEMENT_DESC layout[] =
     {
         { "POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
     };
     UINT numElements = ARRAYSIZE(layout);
 
@@ -83,35 +85,58 @@ HRESULT Renderer::CreateShaders()
     return hr;
 }
 
-HRESULT Renderer::CreateTriangle()
+HRESULT Renderer::CreateRectangle()
 {
     HRESULT hr = S_OK;
 
     // Create vertex buffer
-    VertexPosition triangleVertices[] =
+    VertexData vertices[] =
     {
-        DirectX::XMFLOAT3(0.0f,  0.5f,  0.0f),
-        DirectX::XMFLOAT3(0.5f, -0.5f,  0.0f),
-        DirectX::XMFLOAT3(-0.5f, -0.5f,  0.0f),
+        {DirectX::XMFLOAT3(-0.5f, -0.5f, 0.0f), DirectX::XMFLOAT2(0.0f, 0.0f)},
+        {DirectX::XMFLOAT3(-0.5f, -0.5f, 1.0f), DirectX::XMFLOAT2(0.0f, 1.0f)},
+        {DirectX::XMFLOAT3(0.5f, -0.5f, 1.0f), DirectX::XMFLOAT2(1.0f, 1.0f)},
+        {DirectX::XMFLOAT3(0.5f, -0.5f, 0.0f), DirectX::XMFLOAT2(1.0f, 0.0f)},
     };
-    CD3D11_BUFFER_DESC vbd(sizeof(VertexPosition) * ARRAYSIZE(triangleVertices), D3D11_BIND_VERTEX_BUFFER);
+    CD3D11_BUFFER_DESC vbd(sizeof(VertexData) * ARRAYSIZE(vertices), D3D11_BIND_VERTEX_BUFFER);
     D3D11_SUBRESOURCE_DATA initData;
     ZeroMemory(&initData, sizeof(D3D11_SUBRESOURCE_DATA));
-    initData.pSysMem = triangleVertices;
+    initData.pSysMem = vertices;
     hr = m_pDeviceResources->GetDevice()->CreateBuffer(&vbd, &initData, &m_pVertexBuffer);
     if (FAILED(hr))
         return hr;
 
     // Create index buffer
-    WORD triangleIndices[] =
+    WORD indices[] =
     {
         0, 1, 2,
-        2, 1, 0,
+        2, 3, 0,
     };
-    m_indexCount = ARRAYSIZE(triangleIndices);
-    CD3D11_BUFFER_DESC ibd(sizeof(triangleIndices) * m_indexCount, D3D11_BIND_INDEX_BUFFER);
-    initData.pSysMem = triangleIndices;
+    m_indexCount = ARRAYSIZE(indices);
+    CD3D11_BUFFER_DESC ibd(sizeof(indices) * m_indexCount, D3D11_BIND_INDEX_BUFFER);
+    initData.pSysMem = indices;
     hr = m_pDeviceResources->GetDevice()->CreateBuffer(&ibd, &initData, &m_pIndexBuffer);
+
+    return hr;
+}
+
+HRESULT Renderer::CreateTexture()
+{
+    HRESULT hr = S_OK;
+
+    hr = DirectX::CreateDDSTextureFromFile(m_pDeviceResources->GetDevice(), L"stone.dds", nullptr, &m_pTexture);
+    if (FAILED(hr))
+        return hr;
+
+    D3D11_SAMPLER_DESC sd;
+    ZeroMemory(&sd, sizeof(sd));
+    sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    sd.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    sd.MinLOD = 0;
+    sd.MaxLOD = D3D11_FLOAT32_MAX;
+    hr = m_pDeviceResources->GetDevice()->CreateSamplerState(&sd, &m_pSamplerLinear);
 
     return hr;
 }
@@ -131,7 +156,11 @@ HRESULT Renderer::CreateDeviceDependentResources()
     if (FAILED(hr))
         return hr;
 
-    hr = CreateTriangle();
+    hr = CreateRectangle();
+    if (FAILED(hr))
+        return hr;
+
+    hr = CreateTexture();
     
     return hr;
 }
@@ -140,7 +169,7 @@ void Renderer::CreateWindowSizeDependentResources()
 {
     m_constantBufferData.World = DirectX::XMMatrixIdentity();
 
-    DirectX::XMVECTOR Eye = DirectX::XMVectorSet(0.0f, 0.0f, 1.5f, 0.0f);
+    DirectX::XMVECTOR Eye = DirectX::XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f);
     DirectX::XMVECTOR At = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
     DirectX::XMVECTOR Up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
     m_constantBufferData.View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookAtLH(Eye, At, Up));
@@ -150,9 +179,7 @@ void Renderer::CreateWindowSizeDependentResources()
 
 void Renderer::Update()
 {
-    m_constantBufferData.World = DirectX::XMMatrixTranspose(
-        DirectX::XMMatrixRotationY(DirectX::XMConvertToRadians((float)m_frameCount++))
-    );
+    m_frameCount++;
 
     if (m_frameCount == MAXUINT)
         m_frameCount = 0;
@@ -161,15 +188,17 @@ void Renderer::Update()
 void Renderer::Render()
 {
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
+    ID3D11RenderTargetView* renderTarget = m_pDeviceResources->GetRenderTarget();
+    ID3D11DepthStencilView* depthStencil = m_pDeviceResources->GetDepthStencil();
 
     float background_colour[4] = { 0.3f, 0.5f, 0.7f, 1.0f };
-    context->ClearRenderTargetView(m_pDeviceResources->GetRenderTarget(), background_colour);
+    context->ClearRenderTargetView(renderTarget, background_colour);
+    context->ClearDepthStencilView(depthStencil, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-    ID3D11RenderTargetView* renderTarget = m_pDeviceResources->GetRenderTarget();
-    m_pDeviceResources->GetDeviceContext()->OMSetRenderTargets(1, &renderTarget, nullptr);
+    m_pDeviceResources->GetDeviceContext()->OMSetRenderTargets(1, &renderTarget, depthStencil);
 
     // Set vertex buffer
-    UINT stride = sizeof(VertexPosition);
+    UINT stride = sizeof(VertexData);
     UINT offset = 0;
     context->IASetVertexBuffers(0, 1, m_pVertexBuffer.GetAddressOf(), &stride, &offset);
 
@@ -187,6 +216,8 @@ void Renderer::Render()
     context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
     context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
     context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
+    context->PSSetShaderResources(0, 1, m_pTexture.GetAddressOf());
+    context->PSSetSamplers(0, 1, m_pSamplerLinear.GetAddressOf());
     context->DrawIndexed(m_indexCount, 0, 0);
 }
 

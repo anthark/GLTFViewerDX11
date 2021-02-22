@@ -7,7 +7,8 @@ struct WorldViewProjectionConstantBuffer
 	DirectX::XMMATRIX Projection;
 };
 
-struct VertexPosition
+struct VertexData
 {
 	DirectX::XMFLOAT3 Pos;
+	DirectX::XMFLOAT2 Tex;
 };

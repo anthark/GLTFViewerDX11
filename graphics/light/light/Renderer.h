@@ -18,16 +18,19 @@ public:
 private:
     HRESULT ReadCompiledShader(const WCHAR* szFileName, BYTE** bytes, size_t& bufferSize);
     HRESULT CreateShaders();
-    HRESULT CreateTriangle();
+    HRESULT CreateRectangle();
+    HRESULT CreateTexture();
 
     std::shared_ptr<DeviceResources> m_pDeviceResources;
 
-    Microsoft::WRL::ComPtr<ID3D11InputLayout>   m_pInputLayout;
-    Microsoft::WRL::ComPtr<ID3D11Buffer>        m_pVertexBuffer;
-    Microsoft::WRL::ComPtr<ID3D11Buffer>        m_pIndexBuffer;
-    Microsoft::WRL::ComPtr<ID3D11VertexShader>  m_pVertexShader;
-    Microsoft::WRL::ComPtr<ID3D11PixelShader>   m_pPixelShader;
-    Microsoft::WRL::ComPtr<ID3D11Buffer>        m_pConstantBuffer;
+    Microsoft::WRL::ComPtr<ID3D11InputLayout>        m_pInputLayout;
+    Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pVertexBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pIndexBuffer;
+    Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pVertexShader;
+    Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pPixelShader;
+    Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pConstantBuffer;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pTexture;
+    Microsoft::WRL::ComPtr<ID3D11SamplerState>       m_pSamplerLinear;
 
     WorldViewProjectionConstantBuffer m_constantBufferData;
     

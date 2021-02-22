@@ -17,6 +17,7 @@ public:
     ID3D11DeviceContext*       GetDeviceContext() const { return m_pd3dDeviceContext.Get(); };
     IDXGISwapChain*            GetSwapChain() const     { return m_pSwapChain.Get(); };
     ID3D11RenderTargetView*    GetRenderTarget() const  { return m_pRenderTargetView.Get(); };
+    ID3D11DepthStencilView*    GetDepthStencil() const  { return m_pDepthStencilView.Get(); };
     ID3DUserDefinedAnnotation* GetAnnotation() const    { return m_pAnnotation.Get(); };
 
     void Present();
@@ -28,6 +29,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D11DeviceContext>    m_pd3dDeviceContext;
     Microsoft::WRL::ComPtr<IDXGISwapChain>         m_pSwapChain;
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_pRenderTargetView;
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_pDepthStencilView;
 
     Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> m_pAnnotation;
 

@@ -120,6 +120,35 @@ HRESULT DeviceResources::ConfigureBackBuffer()
 
     pBackBuffer->GetDesc(&m_backBufferDesc);
 
+    // Create depth stencil texture
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> pDepthStencil;
+    D3D11_TEXTURE2D_DESC dd;
+    ZeroMemory(&dd, sizeof(dd));
+    dd.Width = m_backBufferDesc.Width;
+    dd.Height = m_backBufferDesc.Height;
+    dd.MipLevels = 1;
+    dd.ArraySize = 1;
+    dd.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    dd.SampleDesc.Count = 1;
+    dd.SampleDesc.Quality = 0;
+    dd.Usage = D3D11_USAGE_DEFAULT;
+    dd.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    dd.CPUAccessFlags = 0;
+    dd.MiscFlags = 0;
+    hr = m_pd3dDevice->CreateTexture2D(&dd, nullptr, &pDepthStencil);
+    if (FAILED(hr))
+        return hr;
+
+    // Create the depth stencil view
+    D3D11_DEPTH_STENCIL_VIEW_DESC dsvd;
+    ZeroMemory(&dsvd, sizeof(dsvd));
+    dsvd.Format = dd.Format;
+    dsvd.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    dsvd.Texture2D.MipSlice = 0;
+    hr = m_pd3dDevice->CreateDepthStencilView(pDepthStencil.Get(), &dsvd, &m_pDepthStencilView);
+    if (FAILED(hr))
+        return hr;
+
     // Setup the viewport
     D3D11_VIEWPORT vp;
     vp.Width = (FLOAT)m_backBufferDesc.Width;
@@ -142,9 +171,12 @@ HRESULT DeviceResources::OnResize()
 
     m_pd3dDeviceContext->OMSetRenderTargets(0, 0, 0);
     m_pRenderTargetView.Reset();
+    m_pDepthStencilView.Reset();
     m_pd3dDeviceContext->Flush();
 
     hr = m_pSwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
+    if (FAILED(hr))
+        return hr;
 
     hr = ConfigureBackBuffer();
 
