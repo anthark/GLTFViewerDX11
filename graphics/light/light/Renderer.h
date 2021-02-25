@@ -20,6 +20,7 @@ private:
     HRESULT CreateShaders();
     HRESULT CreateRectangle();
     HRESULT CreateTexture();
+    HRESULT CreateLights();
 
     std::shared_ptr<DeviceResources> m_pDeviceResources;
 
@@ -29,10 +30,14 @@ private:
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pVertexShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pPixelShader;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pConstantBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightPositionBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightColorBuffer;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pTexture;
     Microsoft::WRL::ComPtr<ID3D11SamplerState>       m_pSamplerLinear;
 
     WorldViewProjectionConstantBuffer m_constantBufferData;
+    LightPositionConstantBuffer       m_lightPositionBufferData;
+    LightColorConstantBuffer          m_lightColorBufferData;
     
     UINT32 m_indexCount;
     UINT32 m_frameCount;

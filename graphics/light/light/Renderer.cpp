@@ -9,7 +9,9 @@ Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources) :
     m_pDeviceResources(deviceResources),
     m_frameCount(0),
     m_indexCount(0),
-    m_constantBufferData()
+    m_constantBufferData(),
+    m_lightColorBufferData(),
+    m_lightPositionBufferData()
 {};
 
 HRESULT Renderer::ReadCompiledShader(const WCHAR* szFileName, BYTE** bytes, size_t& bufferSize)
@@ -53,8 +55,9 @@ HRESULT Renderer::CreateShaders()
     // Define the input layout
     D3D11_INPUT_ELEMENT_DESC layout[] =
     {
-        { "POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
     };
     UINT numElements = ARRAYSIZE(layout);
 
@@ -92,10 +95,10 @@ HRESULT Renderer::CreateRectangle()
     // Create vertex buffer
     VertexData vertices[] =
     {
-        {DirectX::XMFLOAT3(-0.5f, -0.5f, 0.0f), DirectX::XMFLOAT2(0.0f, 0.0f)},
-        {DirectX::XMFLOAT3(-0.5f, -0.5f, 1.0f), DirectX::XMFLOAT2(0.0f, 1.0f)},
-        {DirectX::XMFLOAT3(0.5f, -0.5f, 1.0f), DirectX::XMFLOAT2(1.0f, 1.0f)},
-        {DirectX::XMFLOAT3(0.5f, -0.5f, 0.0f), DirectX::XMFLOAT2(1.0f, 0.0f)},
+        {DirectX::XMFLOAT3(-10.5f, -0.5f, 0.0f), DirectX::XMFLOAT2(0.0f, 0.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
+        {DirectX::XMFLOAT3(-10.5f, -0.5f, 21.0f), DirectX::XMFLOAT2(0.0f, 1.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
+        {DirectX::XMFLOAT3(10.5f, -0.5f, 21.0f), DirectX::XMFLOAT2(1.0f, 1.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
+        {DirectX::XMFLOAT3(10.5f, -0.5f, 0.0f), DirectX::XMFLOAT2(1.0f, 0.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
     };
     CD3D11_BUFFER_DESC vbd(sizeof(VertexData) * ARRAYSIZE(vertices), D3D11_BIND_VERTEX_BUFFER);
     D3D11_SUBRESOURCE_DATA initData;
@@ -161,7 +164,53 @@ HRESULT Renderer::CreateDeviceDependentResources()
         return hr;
 
     hr = CreateTexture();
+    if (FAILED(hr))
+        return hr;
+
+    hr = CreateLights();
     
+    return hr;
+}
+
+HRESULT Renderer::CreateLights()
+{
+    HRESULT hr = S_OK;
+
+    DirectX::XMFLOAT4 LightPositions[NUM_LIGHTS] =
+    {
+        DirectX::XMFLOAT4(-1.0f, 2.0f, 0.0f, 1.0f),
+        DirectX::XMFLOAT4(1.0f, 2.0f, 0.0f, 1.0f),
+        DirectX::XMFLOAT4(1.0f, 2.0f, 21.0f, 1.0f)
+    };
+
+    DirectX::XMFLOAT4 LightColors[NUM_LIGHTS] =
+    {
+        DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f),
+        DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f),
+        DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)
+    };
+
+    for (int i = 0; i < NUM_LIGHTS; i++)
+    {
+        m_lightColorBufferData.LightColor[i] = LightColors[i];
+        m_lightPositionBufferData.LightPosition[i] = LightPositions[i];
+    }
+
+    // Create the constant buffers for lights
+    CD3D11_BUFFER_DESC lpbd(
+        sizeof(LightPositionConstantBuffer),
+        D3D11_BIND_CONSTANT_BUFFER
+    );
+    hr = m_pDeviceResources->GetDevice()->CreateBuffer(&lpbd, nullptr, &m_pLightPositionBuffer);
+    if (FAILED(hr))
+        return hr;
+
+    CD3D11_BUFFER_DESC lcbd(
+        sizeof(LightColorConstantBuffer),
+        D3D11_BIND_CONSTANT_BUFFER
+    );
+    hr = m_pDeviceResources->GetDevice()->CreateBuffer(&lcbd, nullptr, &m_pLightColorBuffer);
+
     return hr;
 }
 
@@ -169,8 +218,8 @@ void Renderer::CreateWindowSizeDependentResources()
 {
     m_constantBufferData.World = DirectX::XMMatrixIdentity();
 
-    DirectX::XMVECTOR Eye = DirectX::XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f);
-    DirectX::XMVECTOR At = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+    DirectX::XMVECTOR Eye = DirectX::XMVectorSet(0.0f, 15.5f, 5.5f, 0.0f);
+    DirectX::XMVECTOR At = DirectX::XMVectorSet(0.0f, 0.0f, 10.5f, 0.0f);
     DirectX::XMVECTOR Up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
     m_constantBufferData.View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookAtLH(Eye, At, Up));
 
@@ -209,13 +258,17 @@ void Renderer::Render()
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     context->UpdateSubresource(m_pConstantBuffer.Get(), 0, nullptr, &m_constantBufferData, 0, 0);
+    context->UpdateSubresource(m_pLightPositionBuffer.Get(), 0, nullptr, &m_lightPositionBufferData, 0, 0);
+    context->UpdateSubresource(m_pLightColorBuffer.Get(), 0, nullptr, &m_lightColorBufferData, 0, 0);
 
     context->IASetInputLayout(m_pInputLayout.Get());
 
     // Render a triangle
     context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
     context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
+    context->VSSetConstantBuffers(1, 1, m_pLightPositionBuffer.GetAddressOf());
     context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
+    context->PSSetConstantBuffers(2, 1, m_pLightColorBuffer.GetAddressOf());
     context->PSSetShaderResources(0, 1, m_pTexture.GetAddressOf());
     context->PSSetSamplers(0, 1, m_pSamplerLinear.GetAddressOf());
     context->DrawIndexed(m_indexCount, 0, 0);
