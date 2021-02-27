@@ -1,7 +1,9 @@
 #pragma once
 
 #include "DeviceResources.h"
+#include "RenderTexture.h"
 #include "ShaderStructures.h"
+#include "ToneMapPostProcess.h"
 
 class Renderer
 {
@@ -10,19 +12,28 @@ public:
     ~Renderer();
 
     HRESULT CreateDeviceDependentResources();
-    void    CreateWindowSizeDependentResources();
-    void    UpdatePerspective();
-    void    Update();
-    void    Render();
+    HRESULT CreateWindowSizeDependentResources();
+    
+    HRESULT OnResize();
+
+    void Update();
+    void Render();
 
 private:
-    HRESULT ReadCompiledShader(const WCHAR* szFileName, BYTE** bytes, size_t& bufferSize);
     HRESULT CreateShaders();
     HRESULT CreateRectangle();
     HRESULT CreateTexture();
     HRESULT CreateLights();
 
-    std::shared_ptr<DeviceResources> m_pDeviceResources;
+    void UpdatePerspective();
+
+    void Clear();
+    void RenderInTexture();
+    void PostProcessTexture();
+
+    std::shared_ptr<DeviceResources>      m_pDeviceResources;
+    std::unique_ptr<RenderTexture>        m_pRenderTexture;
+    std::unique_ptr<ToneMapPostProcess>   m_pToneMap;
 
     Microsoft::WRL::ComPtr<ID3D11InputLayout>        m_pInputLayout;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pVertexBuffer;

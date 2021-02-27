@@ -1,9 +1,8 @@
 #include "pch.h"
 
-#include <fstream>
-
 #include "Renderer.h"
 #include "DDSTextureLoader11.h"
+#include "Utils.h"
 
 Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources) :
     m_pDeviceResources(deviceResources),
@@ -13,24 +12,6 @@ Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources) :
     m_lightColorBufferData(),
     m_lightPositionBufferData()
 {};
-
-HRESULT Renderer::ReadCompiledShader(const WCHAR* szFileName, BYTE** bytes, size_t& bufferSize)
-{
-    std::ifstream csoFile(szFileName, std::ios::in | std::ios::binary | std::ios::ate);
-
-    if (csoFile.is_open())
-    {
-        bufferSize = (size_t)csoFile.tellg();
-        *bytes = new BYTE[bufferSize];
-
-        csoFile.seekg(0, std::ios::beg);
-        csoFile.read(reinterpret_cast<char*>(*bytes), bufferSize);
-        csoFile.close();
-
-        return S_OK;
-    }
-    return HRESULT_FROM_WIN32(GetLastError());
-}
 
 HRESULT Renderer::CreateShaders()
 {
@@ -168,6 +149,11 @@ HRESULT Renderer::CreateDeviceDependentResources()
         return hr;
 
     hr = CreateLights();
+    if (FAILED(hr))
+        return hr;
+
+    m_pToneMap = std::unique_ptr<ToneMapPostProcess>(new ToneMapPostProcess(m_pDeviceResources));
+    hr = m_pToneMap->CreateResources();
     
     return hr;
 }
@@ -214,8 +200,10 @@ HRESULT Renderer::CreateLights()
     return hr;
 }
 
-void Renderer::CreateWindowSizeDependentResources()
+HRESULT Renderer::CreateWindowSizeDependentResources()
 {
+    HRESULT hr = S_OK;
+
     m_constantBufferData.World = DirectX::XMMatrixIdentity();
 
     DirectX::XMVECTOR Eye = DirectX::XMVectorSet(0.0f, 15.5f, 5.5f, 0.0f);
@@ -224,6 +212,22 @@ void Renderer::CreateWindowSizeDependentResources()
     m_constantBufferData.View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookAtLH(Eye, At, Up));
 
     UpdatePerspective();
+
+    m_pRenderTexture = std::unique_ptr<RenderTexture>(new RenderTexture(m_pDeviceResources));
+    hr = m_pRenderTexture->CreateResources();
+
+    return hr;
+}
+
+HRESULT Renderer::OnResize()
+{
+    HRESULT hr = S_OK;
+
+    UpdatePerspective();
+
+    hr = m_pRenderTexture->CreateResources();
+
+    return hr;
 }
 
 void Renderer::Update()
@@ -234,17 +238,23 @@ void Renderer::Update()
         m_frameCount = 0;
 }
 
-void Renderer::Render()
+void Renderer::Clear()
 {
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
-    ID3D11RenderTargetView* renderTarget = m_pDeviceResources->GetRenderTarget();
+
+    float backgroundColour[4] = { 0.3f, 0.5f, 0.7f, 1.0f };
+    context->ClearRenderTargetView(m_pRenderTexture->GetRenderTargetView(), backgroundColour);
+    context->ClearRenderTargetView(m_pDeviceResources->GetRenderTarget(), backgroundColour);
+    context->ClearDepthStencilView(m_pDeviceResources->GetDepthStencil(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+}
+
+void Renderer::RenderInTexture()
+{
+    ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
+    ID3D11RenderTargetView* renderTarget = m_pRenderTexture->GetRenderTargetView();
     ID3D11DepthStencilView* depthStencil = m_pDeviceResources->GetDepthStencil();
 
-    float background_colour[4] = { 0.3f, 0.5f, 0.7f, 1.0f };
-    context->ClearRenderTargetView(renderTarget, background_colour);
-    context->ClearDepthStencilView(depthStencil, D3D11_CLEAR_DEPTH, 1.0f, 0);
-
-    m_pDeviceResources->GetDeviceContext()->OMSetRenderTargets(1, &renderTarget, depthStencil);
+    context->OMSetRenderTargets(1, &renderTarget, depthStencil);
 
     // Set vertex buffer
     UINT stride = sizeof(VertexData);
@@ -271,7 +281,30 @@ void Renderer::Render()
     context->PSSetConstantBuffers(2, 1, m_pLightColorBuffer.GetAddressOf());
     context->PSSetShaderResources(0, 1, m_pTexture.GetAddressOf());
     context->PSSetSamplers(0, 1, m_pSamplerLinear.GetAddressOf());
+    
     context->DrawIndexed(m_indexCount, 0, 0);
+}
+
+void Renderer::PostProcessTexture()
+{
+    ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
+    ID3D11RenderTargetView* renderTarget = m_pDeviceResources->GetRenderTarget();
+
+    context->OMSetRenderTargets(1, &renderTarget, nullptr);
+
+    m_pToneMap->Process(m_pRenderTexture->GetShaderResourceView());
+
+    ID3D11ShaderResourceView* nullsrv[] = { nullptr };
+    context->PSSetShaderResources(0, 1, nullsrv);
+}
+
+void Renderer::Render()
+{
+    Clear();
+
+    RenderInTexture();
+
+    PostProcessTexture();
 }
 
 Renderer::~Renderer()

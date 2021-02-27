@@ -188,6 +188,16 @@ float DeviceResources::GetAspectRatio()
     return static_cast<float>(m_backBufferDesc.Width) / static_cast<float>(m_backBufferDesc.Height);
 }
 
+UINT DeviceResources::GetWidth()
+{
+    return m_backBufferDesc.Width;
+}
+
+UINT DeviceResources::GetHeight()
+{
+    return m_backBufferDesc.Height;
+}
+
 void DeviceResources::Present()
 {
     m_pSwapChain->Present(1, 0);

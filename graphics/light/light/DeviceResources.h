@@ -12,6 +12,8 @@ public:
     HRESULT OnResize();
 
     float GetAspectRatio();
+    UINT  GetWidth();
+    UINT  GetHeight();
 
     ID3D11Device*              GetDevice() const        { return m_pd3dDevice.Get(); };
     ID3D11DeviceContext*       GetDeviceContext() const { return m_pd3dDeviceContext.Get(); };

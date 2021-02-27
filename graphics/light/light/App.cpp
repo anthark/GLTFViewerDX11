@@ -55,7 +55,7 @@ HRESULT App::CreateDeviceResources()
     if (FAILED(hr))
         return hr;
 
-    m_pRenderer->CreateWindowSizeDependentResources();
+    hr = m_pRenderer->CreateWindowSizeDependentResources();
 
     return hr;
 }
@@ -97,7 +97,7 @@ HRESULT App::OnResize()
     {
         hr = m_pDeviceResources->OnResize();
         if (SUCCEEDED(hr))
-            m_pRenderer->UpdatePerspective();
+            hr = m_pRenderer->OnResize();
     }
 
     return hr;

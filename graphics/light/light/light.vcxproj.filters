@@ -13,6 +13,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{18ec88c5-da7b-4f4f-8270-bd9f08b53d24}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PostProcessShaders">
+      <UniqueIdentifier>{bb56209f-b058-4970-b7ae-e37275c9eee4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DeviceResources.cpp">
@@ -33,16 +39,34 @@
     <ClCompile Include="DDSTextureLoader11.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+    <ClCompile Include="RenderTexture.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="ToneMapPostProcess.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="PixelShader.hlsl">
-      <Filter>Исходные файлы</Filter>
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders.fx">
+      <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="VertexShader.hlsl">
-      <Filter>Исходные файлы</Filter>
+      <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="shaders.fx">
-      <Filter>Исходные файлы</Filter>
+    <FxCompile Include="PostProcessPixelShader.hlsl">
+      <Filter>PostProcessShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="PostProcessShaders.fx">
+      <Filter>PostProcessShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="PostProcessVertexShader.hlsl">
+      <Filter>PostProcessShaders</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
@@ -62,6 +86,15 @@
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="DDSTextureLoader11.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderTexture.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="ToneMapPostProcess.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>
