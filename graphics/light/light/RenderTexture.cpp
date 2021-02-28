@@ -2,22 +2,20 @@
 
 #include "RenderTexture.h"
 
-RenderTexture::RenderTexture(const std::shared_ptr<DeviceResources>& deviceResources) :
-	m_pDeviceResources(deviceResources),
-    m_format(DXGI_FORMAT_R16G16B16A16_FLOAT)
+RenderTexture::RenderTexture(DXGI_FORMAT format) :
+    m_format(format),
+    m_viewport()
 {};
 
-HRESULT RenderTexture::CreateResources()
+HRESULT RenderTexture::CreateResources(ID3D11Device* device, UINT width, UINT height)
 {
     HRESULT hr = S_OK;
-
-    ID3D11Device* device = m_pDeviceResources->GetDevice();
 
     // Create a render target
     CD3D11_TEXTURE2D_DESC rtd(
         m_format,
-        m_pDeviceResources->GetWidth(),
-        m_pDeviceResources->GetHeight(),
+        width,
+        height,
         1,
         1,
         D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
@@ -41,6 +39,13 @@ HRESULT RenderTexture::CreateResources()
     CD3D11_SHADER_RESOURCE_VIEW_DESC srvd(D3D11_SRV_DIMENSION_TEXTURE2D, m_format);
 
     hr = device->CreateShaderResourceView(m_pRenderTarget.Get(), &srvd, m_pShaderResourceView.ReleaseAndGetAddressOf());
+
+    m_viewport.Width = static_cast<FLOAT>(width);
+    m_viewport.Height = static_cast<FLOAT>(height);
+    m_viewport.MinDepth = 0.0f;
+    m_viewport.MaxDepth = 1.0f;
+    m_viewport.TopLeftX = 0;
+    m_viewport.TopLeftY = 0;
 
     return hr;
 }

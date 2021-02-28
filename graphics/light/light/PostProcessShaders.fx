@@ -16,14 +16,14 @@ PS_INPUT vs_main(uint input : SV_VERTEXID)
     return output;
 }
 
-float AverageLightness()
+float AverageLuminance()
 {
     return 0.01;
 }
 
 float Exposure()
 {
-    float l = AverageLightness();
+    float l = AverageLuminance();
     float keyValue = 1.03 - 2 / (2 + log10(l + 1));
     return keyValue / clamp(l, 1e-7, 1.0);
 }

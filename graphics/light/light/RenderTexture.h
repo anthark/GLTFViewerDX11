@@ -5,20 +5,21 @@
 class RenderTexture
 {
 public:
-    RenderTexture(const std::shared_ptr<DeviceResources>& deviceResources);
+    RenderTexture(DXGI_FORMAT format);
     ~RenderTexture();
 
-    HRESULT CreateResources();
+    HRESULT CreateResources(ID3D11Device* device, UINT width, UINT height);
 
     ID3D11RenderTargetView*   GetRenderTargetView() const   { return m_pRenderTargetView.Get(); };
     ID3D11ShaderResourceView* GetShaderResourceView() const { return m_pShaderResourceView.Get(); };
+    
+    D3D11_VIEWPORT GetViewPort() const { return m_viewport; };
 
 private:
-    std::shared_ptr<DeviceResources> m_pDeviceResources;
-
     Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pRenderTarget;
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView>   m_pRenderTargetView;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pShaderResourceView;
 
-    DXGI_FORMAT m_format;
+    DXGI_FORMAT    m_format;
+    D3D11_VIEWPORT m_viewport;
 };

@@ -3,18 +3,15 @@
 #include "ToneMapPostProcess.h"
 #include "Utils.h"
 
-ToneMapPostProcess::ToneMapPostProcess(const std::shared_ptr<DeviceResources>& deviceResources) :
-	m_pDeviceResources(deviceResources)
+ToneMapPostProcess::ToneMapPostProcess()
 {};
 
-HRESULT ToneMapPostProcess::CreateResources()
+HRESULT ToneMapPostProcess::CreateResources(ID3D11Device* device)
 {
     HRESULT hr = S_OK;
 
     BYTE* bytes = nullptr;
     size_t bufferSize;
-
-    ID3D11Device* device = m_pDeviceResources->GetDevice();
 
     // Read the vertex shader
     hr = ReadCompiledShader(L"PostProcessVertexShader.cso", &bytes, bufferSize);
@@ -54,10 +51,8 @@ HRESULT ToneMapPostProcess::CreateResources()
     return hr;
 }
 
-void ToneMapPostProcess::Process(ID3D11ShaderResourceView* sourceTexture)
+void ToneMapPostProcess::Process(ID3D11DeviceContext* context, ID3D11ShaderResourceView* sourceTexture)
 {
-    ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
-
     context->IASetInputLayout(nullptr);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 

@@ -152,8 +152,8 @@ HRESULT Renderer::CreateDeviceDependentResources()
     if (FAILED(hr))
         return hr;
 
-    m_pToneMap = std::unique_ptr<ToneMapPostProcess>(new ToneMapPostProcess(m_pDeviceResources));
-    hr = m_pToneMap->CreateResources();
+    m_pToneMap = std::unique_ptr<ToneMapPostProcess>(new ToneMapPostProcess());
+    hr = m_pToneMap->CreateResources(m_pDeviceResources->GetDevice());
     
     return hr;
 }
@@ -213,8 +213,8 @@ HRESULT Renderer::CreateWindowSizeDependentResources()
 
     UpdatePerspective();
 
-    m_pRenderTexture = std::unique_ptr<RenderTexture>(new RenderTexture(m_pDeviceResources));
-    hr = m_pRenderTexture->CreateResources();
+    m_pRenderTexture = std::unique_ptr<RenderTexture>(new RenderTexture(DXGI_FORMAT_R16G16B16A16_FLOAT));
+    hr = m_pRenderTexture->CreateResources(m_pDeviceResources->GetDevice(), m_pDeviceResources->GetWidth(), m_pDeviceResources->GetHeight());
 
     return hr;
 }
@@ -225,7 +225,7 @@ HRESULT Renderer::OnResize()
 
     UpdatePerspective();
 
-    hr = m_pRenderTexture->CreateResources();
+    hr = m_pRenderTexture->CreateResources(m_pDeviceResources->GetDevice(), m_pDeviceResources->GetWidth(), m_pDeviceResources->GetHeight());
 
     return hr;
 }
@@ -242,7 +242,7 @@ void Renderer::Clear()
 {
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
 
-    float backgroundColour[4] = { 0.3f, 0.5f, 0.7f, 1.0f };
+    float backgroundColour[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
     context->ClearRenderTargetView(m_pRenderTexture->GetRenderTargetView(), backgroundColour);
     context->ClearRenderTargetView(m_pDeviceResources->GetRenderTarget(), backgroundColour);
     context->ClearDepthStencilView(m_pDeviceResources->GetDepthStencil(), D3D11_CLEAR_DEPTH, 1.0f, 0);
@@ -292,7 +292,7 @@ void Renderer::PostProcessTexture()
 
     context->OMSetRenderTargets(1, &renderTarget, nullptr);
 
-    m_pToneMap->Process(m_pRenderTexture->GetShaderResourceView());
+    m_pToneMap->Process(context, m_pRenderTexture->GetShaderResourceView());
 
     ID3D11ShaderResourceView* nullsrv[] = { nullptr };
     context->PSSetShaderResources(0, 1, nullsrv);
