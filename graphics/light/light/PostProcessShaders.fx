@@ -59,8 +59,13 @@ float3 TonemapFilmic(float3 color)
     return curr * whiteScale;
 }
 
+float3 LinearToSRGB(float3 color)
+{
+    return pow(abs(color), 1 / 2.2f);
+}
+
 float4 ps_tonemap_main(PS_INPUT input) : SV_TARGET
 {
     float4 color = sourceTexture.Sample(samState, input.Tex);
-    return float4(TonemapFilmic(color.xyz), color.a);
+    return float4(LinearToSRGB(TonemapFilmic(color.xyz)), color.a);
 }
