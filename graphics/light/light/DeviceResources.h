@@ -22,6 +22,8 @@ public:
     ID3D11DepthStencilView*    GetDepthStencil() const  { return m_pDepthStencilView.Get(); };
     ID3DUserDefinedAnnotation* GetAnnotation() const    { return m_pAnnotation.Get(); };
 
+    D3D11_VIEWPORT GetViewPort() const { return m_viewport; };
+
     void Present();
 
 private:
@@ -37,4 +39,5 @@ private:
 
     D3D_FEATURE_LEVEL    m_featureLevel;
     D3D11_TEXTURE2D_DESC m_backBufferDesc;
+    D3D11_VIEWPORT       m_viewport;
 };

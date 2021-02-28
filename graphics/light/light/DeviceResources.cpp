@@ -4,7 +4,8 @@
 
 DeviceResources::DeviceResources() :
     m_featureLevel(D3D_FEATURE_LEVEL_11_0),
-    m_backBufferDesc()
+    m_backBufferDesc(),
+    m_viewport()
 {};
 
 HRESULT DeviceResources::CreateDeviceResources()
@@ -150,14 +151,12 @@ HRESULT DeviceResources::ConfigureBackBuffer()
         return hr;
 
     // Setup the viewport
-    D3D11_VIEWPORT vp;
-    vp.Width = (FLOAT)m_backBufferDesc.Width;
-    vp.Height = (FLOAT)m_backBufferDesc.Height;
-    vp.MinDepth = 0.0f;
-    vp.MaxDepth = 1.0f;
-    vp.TopLeftX = 0;
-    vp.TopLeftY = 0;
-    m_pd3dDeviceContext->RSSetViewports(1, &vp);
+    m_viewport.Width = static_cast<FLOAT>(m_backBufferDesc.Width);
+    m_viewport.Height = static_cast<FLOAT>(m_backBufferDesc.Height);
+    m_viewport.MinDepth = 0.0f;
+    m_viewport.MaxDepth = 1.0f;
+    m_viewport.TopLeftX = 0;
+    m_viewport.TopLeftY = 0;
 
     std::string textureName("Back Buffer");
     hr = pBackBuffer->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)textureName.size(), textureName.c_str());

@@ -254,7 +254,10 @@ void Renderer::RenderInTexture()
     ID3D11RenderTargetView* renderTarget = m_pRenderTexture->GetRenderTargetView();
     ID3D11DepthStencilView* depthStencil = m_pDeviceResources->GetDepthStencil();
 
+    D3D11_VIEWPORT viewport = m_pRenderTexture->GetViewPort();
+
     context->OMSetRenderTargets(1, &renderTarget, depthStencil);
+    context->RSSetViewports(1, &viewport);
 
     // Set vertex buffer
     UINT stride = sizeof(VertexData);
@@ -290,7 +293,10 @@ void Renderer::PostProcessTexture()
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
     ID3D11RenderTargetView* renderTarget = m_pDeviceResources->GetRenderTarget();
 
+    D3D11_VIEWPORT viewport = m_pDeviceResources->GetViewPort();
+
     context->OMSetRenderTargets(1, &renderTarget, nullptr);
+    context->RSSetViewports(1, &viewport);
 
     m_pToneMap->Process(context, m_pRenderTexture->GetShaderResourceView());
 
