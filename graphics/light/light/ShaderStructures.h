@@ -26,3 +26,9 @@ struct LightColorConstantBuffer
 {
 	DirectX::XMFLOAT4 LightColor[NUM_LIGHTS];
 };
+
+__declspec(align(16))
+struct TimeConstantBuffer
+{
+	float TimeInSeconds;
+};

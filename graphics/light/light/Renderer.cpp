@@ -61,10 +61,10 @@ HRESULT Renderer::CreateRectangle()
     // Create vertex buffer
     VertexData vertices[] =
     {
-        {DirectX::XMFLOAT3(-64.0f, 0.0f, -36.0f), DirectX::XMFLOAT2(0.0f, 0.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
-        {DirectX::XMFLOAT3(-64.0f, 0.0f, 36.0f), DirectX::XMFLOAT2(0.0f, 1.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
-        {DirectX::XMFLOAT3(64.0f, 0.0f, 36.0f), DirectX::XMFLOAT2(1.0f, 1.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
-        {DirectX::XMFLOAT3(64.0f, 0.0f, -36.0f), DirectX::XMFLOAT2(1.0f, 0.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
+        {DirectX::XMFLOAT3(-256.0f, 0.0f, -144.0f), DirectX::XMFLOAT2(0.0f, 0.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
+        {DirectX::XMFLOAT3(-256.0f, 0.0f, 144.0f), DirectX::XMFLOAT2(0.0f, 1.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
+        {DirectX::XMFLOAT3(256.0f, 0.0f, 144.0f), DirectX::XMFLOAT2(1.0f, 1.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
+        {DirectX::XMFLOAT3(256.0f, 0.0f, -144.0f), DirectX::XMFLOAT2(1.0f, 0.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
     };
     CD3D11_BUFFER_DESC vbd(sizeof(VertexData) * ARRAYSIZE(vertices), D3D11_BIND_VERTEX_BUFFER);
     D3D11_SUBRESOURCE_DATA initData;

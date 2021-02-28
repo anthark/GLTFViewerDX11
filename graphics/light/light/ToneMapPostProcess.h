@@ -20,4 +20,5 @@ private:
     Microsoft::WRL::ComPtr<ID3D11VertexShader> m_pVertexShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>  m_pPixelShader;
     Microsoft::WRL::ComPtr<ID3D11SamplerState> m_pSamplerState;
+    Microsoft::WRL::ComPtr<ID3D11Buffer>       m_pTimeBuffer;
 };

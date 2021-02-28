@@ -3,6 +3,11 @@ Texture2D<float4> luminanceTexture : register(t1);
 
 SamplerState samState : register(s0);
 
+cbuffer TimeBetweenFrames : register(b0)
+{
+    float TimeInSeconds;
+}
+
 struct PS_INPUT
 {
     float4 Pos : SV_POSITION;
@@ -25,15 +30,34 @@ float4 ps_copy_main(PS_INPUT input) : SV_TARGET
 float4 ps_luminance_main(PS_INPUT input) : SV_TARGET
 {
     float4 color = sourceTexture.Sample(samState, input.Tex);
-    float l = 0.2126 * color.r + 0.7151 * color.g + 0.0722 * color.b;
+    float l = 0.2126f * color.r + 0.7151f * color.g + 0.0722f * color.b;
     return log(l + 1);
+}
+
+float EyeAdaptation(float l)
+{
+    static float luminance = -1.0f; //exp(luminanceTexture.Sample(samState, float2(0, 0)).r) - 1;
+    
+    if (luminance < 0.0f)
+    {
+        luminance = l;
+    }
+    else
+    {
+        float sigma = 0.04f / (0.04f + l);
+        float tau = sigma * 0.4f + (1 - sigma) * 0.1f;
+        luminance = luminance + (l - luminance) * (1 - exp(-TimeInSeconds / tau));
+    }
+    
+	return luminance;
 }
 
 float Exposure()
 {
     float l = exp(luminanceTexture.Sample(samState, float2(0, 0)).r) - 1;
+    float luminance = EyeAdaptation(l);
     float keyValue = 1.03 - 2 / (2 + log10(l + 1));
-    return keyValue / clamp(l, 1e-7, 1.0);
+    return keyValue / l;
 }
 
 float3 Uncharted2Tonemap(float3 x)

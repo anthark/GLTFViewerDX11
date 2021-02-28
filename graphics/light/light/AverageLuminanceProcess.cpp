@@ -11,7 +11,7 @@ ID3D11ShaderResourceView* AverageLuminanceProcess::GetResultShaderResourceView()
     if (m_renderTextures.size() == 0)
         return nullptr;
 
-    return m_renderTextures[m_renderTextures.size() - 1].GetShaderResourceView(); 
+    return m_renderTextures[m_renderTextures.size() - 1].GetShaderResourceView();
 }
 
 HRESULT AverageLuminanceProcess::CreateDeviceDependentResources(ID3D11Device* device)
@@ -119,6 +119,9 @@ void AverageLuminanceProcess::Process(ID3D11DeviceContext* context, ID3D11Shader
     {
         CopyTexture(context, m_renderTextures[i - 1].GetShaderResourceView(), m_renderTextures[i], m_pCopyPixelShader.Get());
     }
+
+    ID3D11ShaderResourceView* nullsrv[] = { nullptr };
+    context->PSSetShaderResources(0, 1, nullsrv);
 }
 
 AverageLuminanceProcess::~AverageLuminanceProcess()

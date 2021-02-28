@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "ToneMapPostProcess.h"
+#include "ShaderStructures.h"
 #include "Utils.h"
 
 ToneMapPostProcess::ToneMapPostProcess()
@@ -39,6 +40,12 @@ HRESULT ToneMapPostProcess::CreateDeviceDependentResources(ID3D11Device* device)
 
     m_pAverageLuminance = std::unique_ptr<AverageLuminanceProcess>(new AverageLuminanceProcess());
     hr = m_pAverageLuminance->CreateDeviceDependentResources(device);
+    if (FAILED(hr))
+        return hr;
+
+    // Create the constant buffer for time between frames
+    CD3D11_BUFFER_DESC tbd(sizeof(TimeConstantBuffer), D3D11_BIND_CONSTANT_BUFFER);
+    hr = device->CreateBuffer(&tbd, nullptr, &m_pTimeBuffer);
     
     return hr;
 }
@@ -61,6 +68,15 @@ void ToneMapPostProcess::Process(ID3D11DeviceContext* context, ID3D11ShaderResou
     if (averageLuminance == nullptr)
         return;
 
+    static ULONGLONG startTime = GetTickCount64();
+    ULONGLONG currentTime = GetTickCount64();
+
+    float delta = static_cast<float>(currentTime - startTime) / 1000;
+    startTime = currentTime;
+
+    TimeConstantBuffer timeBufferData = { delta };
+    context->UpdateSubresource(m_pTimeBuffer.Get(), 0, nullptr, &timeBufferData, 0, 0);
+
     context->OMSetRenderTargets(1, &renderTarget, nullptr);
     context->RSSetViewports(1, &viewport);
 
@@ -69,6 +85,7 @@ void ToneMapPostProcess::Process(ID3D11DeviceContext* context, ID3D11ShaderResou
 
     context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
     context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
+    context->PSSetConstantBuffers(0, 1, m_pTimeBuffer.GetAddressOf());
     context->PSSetShaderResources(0, 1, &sourceTexture);
     context->PSSetShaderResources(1, 1, &averageLuminance);
     context->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
