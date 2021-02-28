@@ -1,4 +1,5 @@
-Texture2D<float4> Texture : register(t0);
+Texture2D<float4> sourceTexture : register(t0);
+Texture2D<float4> luminanceTexture : register(t1);
 
 SamplerState samState : register(s0);
 
@@ -18,17 +19,19 @@ PS_INPUT vs_copy_main(uint input : SV_VERTEXID)
 
 float4 ps_copy_main(PS_INPUT input) : SV_TARGET
 {
-    return Texture.Sample(samState, input.Tex);
+    return sourceTexture.Sample(samState, input.Tex);
 }
 
-float AverageLuminance()
+float4 ps_luminance_main(PS_INPUT input) : SV_TARGET
 {
-    return 0.01;
+    float4 color = sourceTexture.Sample(samState, input.Tex);
+    float l = 0.2126 * color.r + 0.7151 * color.g + 0.0722 * color.b;
+    return log(l + 1);
 }
 
 float Exposure()
 {
-    float l = AverageLuminance();
+    float l = exp(luminanceTexture.Sample(samState, float2(0, 0)).r) - 1;
     float keyValue = 1.03 - 2 / (2 + log10(l + 1));
     return keyValue / clamp(l, 1e-7, 1.0);
 }
@@ -56,9 +59,8 @@ float3 TonemapFilmic(float3 color)
     return curr * whiteScale;
 }
 
-
 float4 ps_tonemap_main(PS_INPUT input) : SV_TARGET
 {
-    float4 color = Texture.Sample(samState, input.Tex);
+    float4 color = sourceTexture.Sample(samState, input.Tex);
     return float4(TonemapFilmic(color.xyz), color.a);
 }

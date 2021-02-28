@@ -138,7 +138,7 @@ HRESULT Renderer::CreateDeviceDependentResources()
         return hr;
 
     m_pToneMap = std::unique_ptr<ToneMapPostProcess>(new ToneMapPostProcess());
-    hr = m_pToneMap->CreateResources(m_pDeviceResources->GetDevice());
+    hr = m_pToneMap->CreateDeviceDependentResources(m_pDeviceResources->GetDevice());
     
     return hr;
 }
@@ -200,6 +200,10 @@ HRESULT Renderer::CreateWindowSizeDependentResources()
 
     m_pRenderTexture = std::unique_ptr<RenderTexture>(new RenderTexture(DXGI_FORMAT_R16G16B16A16_FLOAT));
     hr = m_pRenderTexture->CreateResources(m_pDeviceResources->GetDevice(), m_pDeviceResources->GetWidth(), m_pDeviceResources->GetHeight());
+    if (FAILED(hr))
+        return hr;
+
+    hr = m_pToneMap->CreateWindowSizeDependentResources(m_pDeviceResources->GetDevice(), m_pDeviceResources->GetWidth(), m_pDeviceResources->GetHeight());
 
     return hr;
 }
@@ -211,6 +215,10 @@ HRESULT Renderer::OnResize()
     UpdatePerspective();
 
     hr = m_pRenderTexture->CreateResources(m_pDeviceResources->GetDevice(), m_pDeviceResources->GetWidth(), m_pDeviceResources->GetHeight());
+    if (FAILED(hr))
+        return hr;
+
+    hr = m_pToneMap->CreateWindowSizeDependentResources(m_pDeviceResources->GetDevice(), m_pDeviceResources->GetWidth(), m_pDeviceResources->GetHeight());
 
     return hr;
 }
@@ -276,14 +284,8 @@ void Renderer::RenderInTexture()
 void Renderer::PostProcessTexture()
 {
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
-    ID3D11RenderTargetView* renderTarget = m_pDeviceResources->GetRenderTarget();
 
-    D3D11_VIEWPORT viewport = m_pDeviceResources->GetViewPort();
-
-    context->OMSetRenderTargets(1, &renderTarget, nullptr);
-    context->RSSetViewports(1, &viewport);
-
-    m_pToneMap->Process(context, m_pRenderTexture->GetShaderResourceView());
+    m_pToneMap->Process(context, m_pRenderTexture->GetShaderResourceView(), m_pDeviceResources->GetRenderTarget(), m_pDeviceResources->GetViewPort());
 
     ID3D11ShaderResourceView* nullsrv[] = { nullptr };
     context->PSSetShaderResources(0, 1, nullsrv);
