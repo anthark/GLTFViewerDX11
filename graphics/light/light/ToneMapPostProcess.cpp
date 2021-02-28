@@ -10,28 +10,15 @@ HRESULT ToneMapPostProcess::CreateResources(ID3D11Device* device)
 {
     HRESULT hr = S_OK;
 
-    BYTE* bytes = nullptr;
-    size_t bufferSize;
-
-    // Read the vertex shader
-    hr = ReadCompiledShader(L"CopyVertexShader.cso", &bytes, bufferSize);
-    if (FAILED(hr))
-        return hr;
+    std::vector<BYTE> bytes;
 
     // Create the vertex shader
-    hr = device->CreateVertexShader(bytes, bufferSize, nullptr, &m_pVertexShader);
-    delete[] bytes;
-    if (FAILED(hr))
-        return hr;
-
-    // Read the pixel shader
-    hr = ReadCompiledShader(L"ToneMapPixelShader.cso", &bytes, bufferSize);
+    hr = CreateVertexShader(device, L"CopyVertexShader.cso", bytes, &m_pVertexShader);
     if (FAILED(hr))
         return hr;
 
     // Create the pixel shader
-    hr = device->CreatePixelShader(bytes, bufferSize, nullptr, &m_pPixelShader);
-    delete[] bytes;
+    hr = CreatePixelShader(device, L"ToneMapPixelShader.cso", bytes, &m_pPixelShader);
     if (FAILED(hr))
         return hr;
 

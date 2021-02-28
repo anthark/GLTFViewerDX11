@@ -17,21 +17,13 @@ HRESULT Renderer::CreateShaders()
 {
     HRESULT hr = S_OK;
 
-    BYTE* bytes = nullptr;
-    size_t bufferSize;
-
-    // Read the vertex shader
-    hr = ReadCompiledShader(L"VertexShader.cso", &bytes, bufferSize);
-    if (FAILED(hr))
-        return hr;
+    std::vector<BYTE> bytes;
+    ID3D11Device* device = m_pDeviceResources->GetDevice();
 
     // Create the vertex shader
-    hr = m_pDeviceResources->GetDevice()->CreateVertexShader(bytes, bufferSize, nullptr, &m_pVertexShader);
+    hr = CreateVertexShader(device, L"VertexShader.cso", bytes, &m_pVertexShader);
     if (FAILED(hr))
-    {
-        delete[] bytes;
         return hr;
-    }
 
     // Define the input layout
     D3D11_INPUT_ELEMENT_DESC layout[] =
@@ -43,19 +35,12 @@ HRESULT Renderer::CreateShaders()
     UINT numElements = ARRAYSIZE(layout);
 
     // Create the input layout
-    hr = m_pDeviceResources->GetDevice()->CreateInputLayout(layout, numElements, bytes, bufferSize, &m_pInputLayout);
-    delete[] bytes;
-    if (FAILED(hr))
-        return hr;
-
-    // Read the pixel shader
-    hr = ReadCompiledShader(L"PixelShader.cso", &bytes, bufferSize);
+    hr = m_pDeviceResources->GetDevice()->CreateInputLayout(layout, numElements, bytes.data(), bytes.size(), &m_pInputLayout);
     if (FAILED(hr))
         return hr;
 
     // Create the pixel shader
-    hr = m_pDeviceResources->GetDevice()->CreatePixelShader(bytes, bufferSize, nullptr, &m_pPixelShader);
-    delete[] bytes;
+    hr = CreatePixelShader(device, L"PixelShader.cso", bytes, &m_pPixelShader);
     if (FAILED(hr))
         return hr;
 
