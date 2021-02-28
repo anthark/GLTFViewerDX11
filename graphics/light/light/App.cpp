@@ -37,9 +37,57 @@ HRESULT App::CreateDesktopWindow(HINSTANCE hInstance, int nCmdShow, WNDPROC pWnd
     return S_OK;
 }
 
+LRESULT App::KeyHandler(WPARAM wParam, LPARAM lParam)
+{
+    switch (wParam)
+    {
+    case 87: // W
+        m_pCamera->MoveDirection(1.0f);
+        break;
+    case 65: // A
+        m_pCamera->MovePerpendicular(1.0f);
+        break;
+    case 83: // S
+        m_pCamera->MoveDirection(-1.0f);
+        break;
+    case 68: // D
+        m_pCamera->MovePerpendicular(-1.0f);
+        break;
+    default:
+        break;
+    }
+    return 0;
+}
+
+LRESULT App::MouseHandler(UINT uMsg, WPARAM wParam)
+{
+    POINT currPos;
+    int dx, dy;
+    switch (uMsg)
+    {
+    case WM_LBUTTONDOWN:
+        GetCursorPos(&m_cursor);
+        break;
+    case WM_MOUSEMOVE:
+        if (wParam == MK_LBUTTON)
+        {
+            GetCursorPos(&currPos);
+            dx = currPos.x - m_cursor.x;
+            dy = currPos.y - m_cursor.y;
+            m_pCamera->Rotate(dx * 1e-3f, dy * 1e-3f);
+        }
+        break;
+    default:
+        break;
+    }
+    return 0;
+}
+
 HRESULT App::CreateDeviceResources()
 {
     HRESULT hr = S_OK;
+
+    m_pCamera = std::shared_ptr<Camera>(new Camera());
 
     m_pDeviceResources = std::shared_ptr<DeviceResources>(new DeviceResources());
     hr = m_pDeviceResources->CreateDeviceResources();
@@ -50,7 +98,7 @@ HRESULT App::CreateDeviceResources()
     if (FAILED(hr))
         return hr;
 
-    m_pRenderer = std::shared_ptr<Renderer>(new Renderer(m_pDeviceResources));
+    m_pRenderer = std::shared_ptr<Renderer>(new Renderer(m_pDeviceResources, m_pCamera));
     hr = m_pRenderer->CreateDeviceDependentResources();
     if (FAILED(hr))
         return hr;

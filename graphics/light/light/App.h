@@ -2,6 +2,7 @@
 
 #include "DeviceResources.h"
 #include "Renderer.h"
+#include "Camera.h"
 
 class App
 {
@@ -16,12 +17,16 @@ public:
 
     void    Run();
     HRESULT OnResize();
+    LRESULT KeyHandler(WPARAM wParam, LPARAM lParam);
+    LRESULT MouseHandler(UINT uMsg, WPARAM wParam);
 
 private:
     void Render();
 
     HWND m_hWnd;
-    
+    POINT m_cursor;
+
     std::shared_ptr<DeviceResources> m_pDeviceResources;
     std::shared_ptr<Renderer>        m_pRenderer;
+    std::shared_ptr<Camera>          m_pCamera;
 };

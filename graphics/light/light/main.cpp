@@ -27,6 +27,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     HRESULT hr;
+
     switch (uMsg)
     {
     case WM_SIZE:
@@ -34,6 +35,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         if (FAILED(hr))
             PostQuitMessage(0);
         break;
+    case WM_KEYDOWN:
+        return g_pApp->KeyHandler(wParam, lParam);
+    case WM_LBUTTONDOWN:
+    case WM_MOUSEMOVE:
+        return g_pApp->MouseHandler(uMsg, wParam);
     case WM_DESTROY:
         PostQuitMessage(0);
         break;

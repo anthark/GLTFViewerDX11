@@ -4,8 +4,9 @@
 #include "DDSTextureLoader11.h"
 #include "Utils.h"
 
-Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources) :
+Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources, const std::shared_ptr<Camera>& camera) :
     m_pDeviceResources(deviceResources),
+    m_pCamera(camera),
     m_frameCount(0),
     m_indexCount(0),
     m_constantBufferData(),
@@ -191,11 +192,6 @@ HRESULT Renderer::CreateWindowSizeDependentResources()
 
     m_constantBufferData.World = DirectX::XMMatrixIdentity();
 
-    m_constantBufferData.Eye = DirectX::XMVectorSet(0.0f, 40.0f, -20.0f, 0.0f);
-    DirectX::XMVECTOR At = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
-    DirectX::XMVECTOR Up = DirectX::XMVectorSet(0.0f, 1.0f, 2.0f, 0.0f);
-    m_constantBufferData.View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookAtLH(m_constantBufferData.Eye, At, Up));
-
     UpdatePerspective();
 
     m_pRenderTexture = std::unique_ptr<RenderTexture>(new RenderTexture(DXGI_FORMAT_R16G16B16A16_FLOAT));
@@ -290,6 +286,9 @@ void Renderer::PostProcessTexture()
 
 void Renderer::Render()
 {
+    m_constantBufferData.View = DirectX::XMMatrixTranspose(m_pCamera->GetViewMatrix());
+    m_constantBufferData.Eye = m_pCamera->GetPosition();
+
     Clear();
 
     RenderInTexture();
