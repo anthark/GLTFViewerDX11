@@ -14,7 +14,7 @@ HRESULT ToneMapPostProcess::CreateResources(ID3D11Device* device)
     size_t bufferSize;
 
     // Read the vertex shader
-    hr = ReadCompiledShader(L"PostProcessVertexShader.cso", &bytes, bufferSize);
+    hr = ReadCompiledShader(L"CopyVertexShader.cso", &bytes, bufferSize);
     if (FAILED(hr))
         return hr;
 
@@ -25,7 +25,7 @@ HRESULT ToneMapPostProcess::CreateResources(ID3D11Device* device)
         return hr;
 
     // Read the pixel shader
-    hr = ReadCompiledShader(L"PostProcessPixelShader.cso", &bytes, bufferSize);
+    hr = ReadCompiledShader(L"ToneMapPixelShader.cso", &bytes, bufferSize);
     if (FAILED(hr))
         return hr;
 

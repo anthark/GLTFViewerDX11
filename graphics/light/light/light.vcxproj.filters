@@ -59,13 +59,13 @@
     <FxCompile Include="VertexShader.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="PostProcessPixelShader.hlsl">
-      <Filter>PostProcessShaders</Filter>
-    </FxCompile>
     <FxCompile Include="PostProcessShaders.fx">
       <Filter>PostProcessShaders</Filter>
     </FxCompile>
-    <FxCompile Include="PostProcessVertexShader.hlsl">
+    <FxCompile Include="CopyVertexShader.hlsl">
+      <Filter>PostProcessShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="ToneMapPixelShader.hlsl">
       <Filter>PostProcessShaders</Filter>
     </FxCompile>
   </ItemGroup>

@@ -8,12 +8,17 @@ struct PS_INPUT
     float2 Tex : TEXCOORD;
 };
 
-PS_INPUT vs_main(uint input : SV_VERTEXID)
+PS_INPUT vs_copy_main(uint input : SV_VERTEXID)
 {
     PS_INPUT output = (PS_INPUT)0;
     output.Tex = float2((input << 1) & 2, input & 2);
     output.Pos = float4(output.Tex.x * 2 - 1, -output.Tex.y * 2 + 1, 0, 1);
     return output;
+}
+
+float4 ps_copy_main(PS_INPUT input) : SV_TARGET
+{
+    return Texture.Sample(samState, input.Tex);
 }
 
 float AverageLuminance()
@@ -52,7 +57,7 @@ float3 TonemapFilmic(float3 color)
 }
 
 
-float4 ps_main(PS_INPUT input) : SV_TARGET
+float4 ps_tonemap_main(PS_INPUT input) : SV_TARGET
 {
     float4 color = Texture.Sample(samState, input.Tex);
     return float4(TonemapFilmic(color.xyz), color.a);
