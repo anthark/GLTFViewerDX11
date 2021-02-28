@@ -61,10 +61,10 @@ HRESULT Renderer::CreateRectangle()
     // Create vertex buffer
     VertexData vertices[] =
     {
-        {DirectX::XMFLOAT3(-10.5f, -0.5f, 0.0f), DirectX::XMFLOAT2(0.0f, 0.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
-        {DirectX::XMFLOAT3(-10.5f, -0.5f, 21.0f), DirectX::XMFLOAT2(0.0f, 1.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
-        {DirectX::XMFLOAT3(10.5f, -0.5f, 21.0f), DirectX::XMFLOAT2(1.0f, 1.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
-        {DirectX::XMFLOAT3(10.5f, -0.5f, 0.0f), DirectX::XMFLOAT2(1.0f, 0.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
+        {DirectX::XMFLOAT3(-64.0f, 0.0f, -36.0f), DirectX::XMFLOAT2(0.0f, 0.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
+        {DirectX::XMFLOAT3(-64.0f, 0.0f, 36.0f), DirectX::XMFLOAT2(0.0f, 1.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
+        {DirectX::XMFLOAT3(64.0f, 0.0f, 36.0f), DirectX::XMFLOAT2(1.0f, 1.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
+        {DirectX::XMFLOAT3(64.0f, 0.0f, -36.0f), DirectX::XMFLOAT2(1.0f, 0.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
     };
     CD3D11_BUFFER_DESC vbd(sizeof(VertexData) * ARRAYSIZE(vertices), D3D11_BIND_VERTEX_BUFFER);
     D3D11_SUBRESOURCE_DATA initData;
@@ -149,16 +149,16 @@ HRESULT Renderer::CreateLights()
 
     DirectX::XMFLOAT4 LightPositions[NUM_LIGHTS] =
     {
-        DirectX::XMFLOAT4(-1.0f, 2.0f, 0.0f, 1.0f),
-        DirectX::XMFLOAT4(1.0f, 2.0f, 0.0f, 1.0f),
-        DirectX::XMFLOAT4(1.0f, 2.0f, 21.0f, 1.0f)
+        DirectX::XMFLOAT4(4.0f, 10.0f, -5.0f, 1.0f),
+        DirectX::XMFLOAT4(-4.0f, 10.0f, -5.0f, 1.0f),
+        DirectX::XMFLOAT4(0.0f, 10.0f, 2.0f, 1.0f)
     };
 
     DirectX::XMFLOAT4 LightColors[NUM_LIGHTS] =
     {
         DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f),
-        DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f),
-        DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)
+        DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f),
+        DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)
     };
 
     for (int i = 0; i < NUM_LIGHTS; i++)
@@ -191,10 +191,10 @@ HRESULT Renderer::CreateWindowSizeDependentResources()
 
     m_constantBufferData.World = DirectX::XMMatrixIdentity();
 
-    DirectX::XMVECTOR Eye = DirectX::XMVectorSet(0.0f, 15.5f, 5.5f, 0.0f);
-    DirectX::XMVECTOR At = DirectX::XMVectorSet(0.0f, 0.0f, 10.5f, 0.0f);
-    DirectX::XMVECTOR Up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    m_constantBufferData.View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookAtLH(Eye, At, Up));
+    m_constantBufferData.Eye = DirectX::XMVectorSet(0.0f, 40.0f, -20.0f, 0.0f);
+    DirectX::XMVECTOR At = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+    DirectX::XMVECTOR Up = DirectX::XMVectorSet(0.0f, 1.0f, 2.0f, 0.0f);
+    m_constantBufferData.View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookAtLH(m_constantBufferData.Eye, At, Up));
 
     UpdatePerspective();
 
@@ -286,9 +286,6 @@ void Renderer::PostProcessTexture()
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
 
     m_pToneMap->Process(context, m_pRenderTexture->GetShaderResourceView(), m_pDeviceResources->GetRenderTarget(), m_pDeviceResources->GetViewPort());
-
-    ID3D11ShaderResourceView* nullsrv[] = { nullptr };
-    context->PSSetShaderResources(0, 1, nullsrv);
 }
 
 void Renderer::Render()

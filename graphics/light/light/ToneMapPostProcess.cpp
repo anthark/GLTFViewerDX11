@@ -74,6 +74,10 @@ void ToneMapPostProcess::Process(ID3D11DeviceContext* context, ID3D11ShaderResou
     context->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
     
     context->Draw(3, 0);
+
+    ID3D11ShaderResourceView* nullsrv[] = { nullptr };
+    context->PSSetShaderResources(0, 1, nullsrv);
+    context->PSSetShaderResources(1, 1, nullsrv);
 }
 
 ToneMapPostProcess::~ToneMapPostProcess()
