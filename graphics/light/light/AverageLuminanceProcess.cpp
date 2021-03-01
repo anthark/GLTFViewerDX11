@@ -106,6 +106,9 @@ void AverageLuminanceProcess::CopyTexture(ID3D11DeviceContext* context, ID3D11Sh
     context->PSSetShaderResources(0, 1, &sourceTexture);
     
     context->Draw(4, 0);
+
+    ID3D11ShaderResourceView* nullsrv[] = { nullptr };
+    context->PSSetShaderResources(0, 1, nullsrv);
 }
 
 float AverageLuminanceProcess::Process(ID3D11DeviceContext* context, ID3D11ShaderResourceView* sourceTexture)
@@ -150,7 +153,7 @@ float AverageLuminanceProcess::Process(ID3D11DeviceContext* context, ID3D11Shade
     float sigma = 0.04f / (0.04f + luminance);
     float tau = sigma * 0.4f + (1 - sigma) * 0.1f;
     m_adaptedLuminance += (luminance - m_adaptedLuminance) * static_cast<float>(1 - std::exp(-delta * tau));
-    return std::exp(m_adaptedLuminance) - 1;
+    return m_adaptedLuminance;
 }
 
 AverageLuminanceProcess::~AverageLuminanceProcess()
