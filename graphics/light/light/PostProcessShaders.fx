@@ -30,12 +30,12 @@ float4 ps_luminance_main(PS_INPUT input) : SV_TARGET
 {
     float4 color = sourceTexture.Sample(samState, input.Tex);
     float l = 0.2126f * color.r + 0.7151f * color.g + 0.0722f * color.b;
-    return max(log(l), 0) + 1;
+    return log(l + 1);
 }
 
 float Exposure()
 {
-    float luminance = exp(AverageLuminance) - 1;
+    float luminance = AverageLuminance;
     float keyValue = 1.03 - 2 / (2 + log10(luminance + 1));
     return keyValue / luminance;
 }

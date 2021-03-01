@@ -49,7 +49,7 @@ HRESULT AverageLuminanceProcess::CreateDeviceDependentResources(ID3D11Device* de
         return hr;
 
     CD3D11_TEXTURE2D_DESC ltd(
-        DXGI_FORMAT_R16G16B16A16_FLOAT,
+        DXGI_FORMAT_R32G32B32A32_FLOAT,
         1,
         1,
         1,
@@ -74,7 +74,7 @@ HRESULT AverageLuminanceProcess::CreateWindowSizeDependentResources(ID3D11Device
     m_renderTextures.reserve(n + 2);
 
     UINT size = 1 << n;
-    RenderTexture initTexture(DXGI_FORMAT_R16G16B16A16_FLOAT);
+    RenderTexture initTexture(DXGI_FORMAT_R32G32B32A32_FLOAT);
     hr = initTexture.CreateResources(device, size, size);
     if (FAILED(hr))
         return hr;
@@ -83,7 +83,7 @@ HRESULT AverageLuminanceProcess::CreateWindowSizeDependentResources(ID3D11Device
     for (size_t i = 0; i <= n; i++)
     {
         size = 1 << (n - i);
-        RenderTexture texture(DXGI_FORMAT_R16G16B16A16_FLOAT);
+        RenderTexture texture(DXGI_FORMAT_R32G32B32A32_FLOAT);
         hr = texture.CreateResources(device, size, size);
         if (FAILED(hr))
             return hr;
@@ -145,9 +145,12 @@ float AverageLuminanceProcess::Process(ID3D11DeviceContext* context, ID3D11Shade
     context->CopyResource(m_pLuminanceTexture.Get(), m_renderTextures[m_renderTextures.size() - 1].GetRenderTarget());
     context->Map(m_pLuminanceTexture.Get(), 0, D3D11_MAP_READ, 0, &luminanceAccessor);
     float luminance = *(float*)luminanceAccessor.pData;
-    m_adaptedLuminance += (luminance - m_adaptedLuminance) * static_cast<float>(1 - std::exp(-delta / 2));
+    context->Unmap(m_pLuminanceTexture.Get(), 0);
 
-    return m_adaptedLuminance;
+    float sigma = 0.04f / (0.04f + luminance);
+    float tau = sigma * 0.4f + (1 - sigma) * 0.1f;
+    m_adaptedLuminance += (luminance - m_adaptedLuminance) * static_cast<float>(1 - std::exp(-delta * tau));
+    return std::exp(m_adaptedLuminance) - 1;
 }
 
 AverageLuminanceProcess::~AverageLuminanceProcess()

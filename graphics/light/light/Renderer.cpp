@@ -93,7 +93,8 @@ HRESULT Renderer::CreateTexture()
 {
     HRESULT hr = S_OK;
 
-    hr = DirectX::CreateDDSTextureFromFile(m_pDeviceResources->GetDevice(), L"stone.dds", nullptr, &m_pTexture);
+    hr = DirectX::CreateDDSTextureFromFileEx(m_pDeviceResources->GetDevice(), nullptr, L"stone.dds", 0,
+        D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, true, nullptr, &m_pTexture);
     if (FAILED(hr))
         return hr;
 
@@ -204,7 +205,7 @@ HRESULT Renderer::CreateWindowSizeDependentResources()
 
     UpdatePerspective();
 
-    m_pRenderTexture = std::unique_ptr<RenderTexture>(new RenderTexture(DXGI_FORMAT_R16G16B16A16_FLOAT));
+    m_pRenderTexture = std::unique_ptr<RenderTexture>(new RenderTexture(DXGI_FORMAT_R32G32B32A32_FLOAT));
     hr = m_pRenderTexture->CreateResources(m_pDeviceResources->GetDevice(), m_pDeviceResources->GetWidth(), m_pDeviceResources->GetHeight());
     if (FAILED(hr))
         return hr;
@@ -241,7 +242,7 @@ void Renderer::Clear()
 {
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
 
-    float backgroundColour[4] = { 0.3f, 0.5f, 0.7f, 1.0f };
+    float backgroundColour[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
     context->ClearRenderTargetView(m_pRenderTexture->GetRenderTargetView(), backgroundColour);
     context->ClearRenderTargetView(m_pDeviceResources->GetRenderTarget(), backgroundColour);
     context->ClearDepthStencilView(m_pDeviceResources->GetDepthStencil(), D3D11_CLEAR_DEPTH, 1.0f, 0);
