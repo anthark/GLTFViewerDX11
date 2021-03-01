@@ -4,8 +4,6 @@
 
 Camera::Camera()
 {
-    m_verticalAngle = 0.0f;
-
     m_eye = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
     m_viewDir = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
     m_up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
@@ -23,11 +21,10 @@ void Camera::MovePerpendicular(float delta)
 
 void Camera::Rotate(float horisontalAngle, float verticalAngle)
 {
-    m_viewDir = DirectX::XMVector3Rotate(m_viewDir, DirectX::XMQuaternionRotationAxis(m_up, horisontalAngle));
+    m_viewDir = DirectX::XMVector3Rotate(m_viewDir, DirectX::XMQuaternionRotationAxis(m_up, -horisontalAngle));
     DirectX::XMVECTOR perpendicular = DirectX::XMVectorScale(GetPerpendicular(), -1.0f);
-    verticalAngle = min(max(verticalAngle, -DirectX::XM_PIDIV2 - m_verticalAngle), DirectX::XM_PIDIV2 - m_verticalAngle);
-    m_verticalAngle += verticalAngle;
-    m_viewDir = DirectX::XMVector3Rotate(m_viewDir, DirectX::XMQuaternionRotationAxis(perpendicular, verticalAngle));
+    m_viewDir = DirectX::XMVector3Rotate(m_viewDir, DirectX::XMQuaternionRotationAxis(perpendicular, -verticalAngle));
+    m_up = DirectX::XMVector3Rotate(m_up, DirectX::XMQuaternionRotationAxis(perpendicular, -verticalAngle));
 }
 
 DirectX::XMVECTOR Camera::GetPerpendicular() const

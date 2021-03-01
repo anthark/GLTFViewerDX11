@@ -53,6 +53,12 @@ LRESULT App::KeyHandler(WPARAM wParam, LPARAM lParam)
     case 68: // D
         m_pCamera->MovePerpendicular(-1.0f);
         break;
+    case 81: // Q
+        m_pRenderer->UpdateLightColor(0, 10.0f);
+        break;
+    case 69: // E
+        m_pRenderer->UpdateLightColor(0, 0.1f);
+        break;
     default:
         break;
     }
@@ -74,7 +80,8 @@ LRESULT App::MouseHandler(UINT uMsg, WPARAM wParam)
             GetCursorPos(&currPos);
             dx = currPos.x - m_cursor.x;
             dy = currPos.y - m_cursor.y;
-            m_pCamera->Rotate(dx * 1e-3f, dy * 1e-3f);
+            m_cursor = currPos;
+            m_pCamera->Rotate(dx * 5e-3f, dy * 5e-3f);
         }
         break;
     default:

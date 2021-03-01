@@ -114,7 +114,7 @@ HRESULT Renderer::CreateTexture()
 void Renderer::UpdatePerspective()
 {
     m_constantBufferData.Projection = DirectX::XMMatrixTranspose(
-        DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, m_pDeviceResources->GetAspectRatio(), 0.01f, 100.0f)
+        DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, m_pDeviceResources->GetAspectRatio(), 0.01f, 1000.0f)
     );
 }
 
@@ -158,8 +158,8 @@ HRESULT Renderer::CreateLights()
     DirectX::XMFLOAT4 LightColors[NUM_LIGHTS] =
     {
         DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f),
-        DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f),
-        DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)
+        DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f),
+        DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)
     };
 
     for (int i = 0; i < NUM_LIGHTS; i++)
@@ -184,6 +184,16 @@ HRESULT Renderer::CreateLights()
     hr = m_pDeviceResources->GetDevice()->CreateBuffer(&lcbd, nullptr, &m_pLightColorBuffer);
 
     return hr;
+}
+
+void Renderer::UpdateLightColor(UINT index, float factor)
+{
+    if (index < NUM_LIGHTS)
+    {
+        m_lightColorBufferData.LightColor[index].x *= factor;
+        m_lightColorBufferData.LightColor[index].y *= factor;
+        m_lightColorBufferData.LightColor[index].z *= factor;
+    }
 }
 
 HRESULT Renderer::CreateWindowSizeDependentResources()
@@ -231,7 +241,7 @@ void Renderer::Clear()
 {
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
 
-    float backgroundColour[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    float backgroundColour[4] = { 0.3f, 0.5f, 0.7f, 1.0f };
     context->ClearRenderTargetView(m_pRenderTexture->GetRenderTargetView(), backgroundColour);
     context->ClearRenderTargetView(m_pDeviceResources->GetRenderTarget(), backgroundColour);
     context->ClearDepthStencilView(m_pDeviceResources->GetDepthStencil(), D3D11_CLEAR_DEPTH, 1.0f, 0);

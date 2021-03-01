@@ -16,8 +16,6 @@ public:
 private:
     DirectX::XMVECTOR GetPerpendicular() const;
 
-    float m_verticalAngle;
-
     DirectX::XMVECTOR m_eye;
     DirectX::XMVECTOR m_viewDir;
     DirectX::XMVECTOR m_up;
