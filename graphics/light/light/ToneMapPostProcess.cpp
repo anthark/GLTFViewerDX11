@@ -43,9 +43,9 @@ HRESULT ToneMapPostProcess::CreateDeviceDependentResources(ID3D11Device* device)
     if (FAILED(hr))
         return hr;
 
-    // Create the constant buffer for time between frames
-    CD3D11_BUFFER_DESC tbd(sizeof(TimeConstantBuffer), D3D11_BIND_CONSTANT_BUFFER);
-    hr = device->CreateBuffer(&tbd, nullptr, &m_pTimeBuffer);
+    // Create the constant buffer for average luminance
+    CD3D11_BUFFER_DESC albd(sizeof(LuminanceConstantBuffer), D3D11_BIND_CONSTANT_BUFFER);
+    hr = device->CreateBuffer(&albd, nullptr, &m_pLuminanceBuffer);
     
     return hr;
 }
@@ -61,21 +61,10 @@ HRESULT ToneMapPostProcess::CreateWindowSizeDependentResources(ID3D11Device* dev
 
 void ToneMapPostProcess::Process(ID3D11DeviceContext* context, ID3D11ShaderResourceView* sourceTexture, ID3D11RenderTargetView* renderTarget, D3D11_VIEWPORT viewport)
 {
-    m_pAverageLuminance->Process(context, sourceTexture);
-    
-    ID3D11ShaderResourceView* averageLuminance = m_pAverageLuminance->GetResultShaderResourceView();
+    float averageLuminance = m_pAverageLuminance->Process(context, sourceTexture);
 
-    if (averageLuminance == nullptr)
-        return;
-
-    static ULONGLONG startTime = GetTickCount64();
-    ULONGLONG currentTime = GetTickCount64();
-
-    float delta = static_cast<float>(currentTime - startTime) / 1000;
-    startTime = currentTime;
-
-    TimeConstantBuffer timeBufferData = { delta };
-    context->UpdateSubresource(m_pTimeBuffer.Get(), 0, nullptr, &timeBufferData, 0, 0);
+    LuminanceConstantBuffer luminanceBufferData = { averageLuminance };
+    context->UpdateSubresource(m_pLuminanceBuffer.Get(), 0, nullptr, &luminanceBufferData, 0, 0);
 
     context->OMSetRenderTargets(1, &renderTarget, nullptr);
     context->RSSetViewports(1, &viewport);
@@ -85,16 +74,14 @@ void ToneMapPostProcess::Process(ID3D11DeviceContext* context, ID3D11ShaderResou
 
     context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
     context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
-    context->PSSetConstantBuffers(0, 1, m_pTimeBuffer.GetAddressOf());
+    context->PSSetConstantBuffers(0, 1, m_pLuminanceBuffer.GetAddressOf());
     context->PSSetShaderResources(0, 1, &sourceTexture);
-    context->PSSetShaderResources(1, 1, &averageLuminance);
     context->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
     
     context->Draw(3, 0);
 
     ID3D11ShaderResourceView* nullsrv[] = { nullptr };
     context->PSSetShaderResources(0, 1, nullsrv);
-    context->PSSetShaderResources(1, 1, nullsrv);
 }
 
 ToneMapPostProcess::~ToneMapPostProcess()

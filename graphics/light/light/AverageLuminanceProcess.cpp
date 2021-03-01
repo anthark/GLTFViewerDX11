@@ -1,17 +1,15 @@
 #include "pch.h"
 
+#include <cmath>
+
 #include "AverageLuminanceProcess.h"
 #include "Utils.h"
 
-AverageLuminanceProcess::AverageLuminanceProcess()
-{}
-
-ID3D11ShaderResourceView* AverageLuminanceProcess::GetResultShaderResourceView() const
-{ 
-    if (m_renderTextures.size() == 0)
-        return nullptr;
-
-    return m_renderTextures[m_renderTextures.size() - 1].GetShaderResourceView();
+AverageLuminanceProcess::AverageLuminanceProcess() :
+    m_adaptedLuminance(0.0)
+{
+    QueryPerformanceFrequency(&m_qpcFrequency);
+    QueryPerformanceCounter(&m_qpcLastTime);
 }
 
 HRESULT AverageLuminanceProcess::CreateDeviceDependentResources(ID3D11Device* device)
@@ -47,6 +45,20 @@ HRESULT AverageLuminanceProcess::CreateDeviceDependentResources(ID3D11Device* de
     sd.MaxLOD = D3D11_FLOAT32_MAX;
     sd.MaxAnisotropy = D3D11_MAX_MAXANISOTROPY;
     hr = device->CreateSamplerState(&sd, m_pSamplerState.GetAddressOf());
+    if (FAILED(hr))
+        return hr;
+
+    CD3D11_TEXTURE2D_DESC ltd(
+        DXGI_FORMAT_R16G16B16A16_FLOAT,
+        1,
+        1,
+        1,
+        1,
+        0,
+        D3D11_USAGE_STAGING,
+        D3D11_CPU_ACCESS_READ
+    );
+    hr = device->CreateTexture2D(&ltd, nullptr, &m_pLuminanceTexture);
 
     return hr;
 }
@@ -96,10 +108,10 @@ void AverageLuminanceProcess::CopyTexture(ID3D11DeviceContext* context, ID3D11Sh
     context->Draw(3, 0);
 }
 
-void AverageLuminanceProcess::Process(ID3D11DeviceContext* context, ID3D11ShaderResourceView* sourceTexture)
+float AverageLuminanceProcess::Process(ID3D11DeviceContext* context, ID3D11ShaderResourceView* sourceTexture)
 {
     if (m_renderTextures.size() == 0)
-        return;
+        return m_adaptedLuminance;
 
     float backgroundColour[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
     for (size_t i = 0; i < m_renderTextures.size(); i++)
@@ -122,6 +134,20 @@ void AverageLuminanceProcess::Process(ID3D11DeviceContext* context, ID3D11Shader
 
     ID3D11ShaderResourceView* nullsrv[] = { nullptr };
     context->PSSetShaderResources(0, 1, nullsrv);
+
+    LARGE_INTEGER currentTime;
+    QueryPerformanceCounter(&currentTime);
+    size_t timeDelta = currentTime.QuadPart - m_qpcLastTime.QuadPart;
+    m_qpcLastTime = currentTime;
+    double delta = static_cast<double>(timeDelta) / m_qpcFrequency.QuadPart;
+
+    D3D11_MAPPED_SUBRESOURCE luminanceAccessor;
+    context->CopyResource(m_pLuminanceTexture.Get(), m_renderTextures[m_renderTextures.size() - 1].GetRenderTarget());
+    context->Map(m_pLuminanceTexture.Get(), 0, D3D11_MAP_READ, 0, &luminanceAccessor);
+    float luminance = *(float*)luminanceAccessor.pData;
+    m_adaptedLuminance += (luminance - m_adaptedLuminance) * static_cast<float>(1 - std::exp(-delta / 2));
+
+    return m_adaptedLuminance;
 }
 
 AverageLuminanceProcess::~AverageLuminanceProcess()

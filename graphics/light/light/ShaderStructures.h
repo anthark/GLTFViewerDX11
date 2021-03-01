@@ -28,7 +28,7 @@ struct LightColorConstantBuffer
 };
 
 __declspec(align(16))
-struct TimeConstantBuffer
+struct LuminanceConstantBuffer
 {
-	float TimeInSeconds;
+	float AverageLuminance;
 };

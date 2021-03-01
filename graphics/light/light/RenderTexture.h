@@ -10,6 +10,7 @@ public:
 
     HRESULT CreateResources(ID3D11Device* device, UINT width, UINT height);
 
+    ID3D11Texture2D*          GetRenderTarget() const       { return m_pRenderTarget.Get(); };
     ID3D11RenderTargetView*   GetRenderTargetView() const   { return m_pRenderTargetView.Get(); };
     ID3D11ShaderResourceView* GetShaderResourceView() const { return m_pShaderResourceView.Get(); };
     
