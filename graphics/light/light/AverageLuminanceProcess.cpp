@@ -36,7 +36,7 @@ HRESULT AverageLuminanceProcess::CreateDeviceDependentResources(ID3D11Device* de
     // Create the sampler state
     D3D11_SAMPLER_DESC sd;
     ZeroMemory(&sd, sizeof(sd));
-    sd.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
     sd.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
     sd.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
     sd.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -105,7 +105,7 @@ void AverageLuminanceProcess::CopyTexture(ID3D11DeviceContext* context, ID3D11Sh
     context->PSSetShader(pixelShader, nullptr, 0);
     context->PSSetShaderResources(0, 1, &sourceTexture);
     
-    context->Draw(3, 0);
+    context->Draw(4, 0);
 }
 
 float AverageLuminanceProcess::Process(ID3D11DeviceContext* context, ID3D11ShaderResourceView* sourceTexture)
@@ -118,7 +118,7 @@ float AverageLuminanceProcess::Process(ID3D11DeviceContext* context, ID3D11Shade
         context->ClearRenderTargetView(m_renderTextures[i].GetRenderTargetView(), backgroundColour);
 
     context->IASetInputLayout(nullptr);
-    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
     context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
 

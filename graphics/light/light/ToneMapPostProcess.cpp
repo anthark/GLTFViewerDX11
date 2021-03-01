@@ -70,7 +70,7 @@ void ToneMapPostProcess::Process(ID3D11DeviceContext* context, ID3D11ShaderResou
     context->RSSetViewports(1, &viewport);
 
     context->IASetInputLayout(nullptr);
-    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
     context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
     context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
@@ -78,7 +78,7 @@ void ToneMapPostProcess::Process(ID3D11DeviceContext* context, ID3D11ShaderResou
     context->PSSetShaderResources(0, 1, &sourceTexture);
     context->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
     
-    context->Draw(3, 0);
+    context->Draw(4, 0);
 
     ID3D11ShaderResourceView* nullsrv[] = { nullptr };
     context->PSSetShaderResources(0, 1, nullsrv);

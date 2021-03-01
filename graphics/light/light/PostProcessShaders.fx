@@ -16,8 +16,8 @@ struct PS_INPUT
 PS_INPUT vs_copy_main(uint input : SV_VERTEXID)
 {
     PS_INPUT output = (PS_INPUT)0;
-    output.Tex = float2((input << 1) & 2, input & 2);
-    output.Pos = float4(output.Tex.x * 2 - 1, -output.Tex.y * 2 + 1, 0, 1);
+    output.Tex = float2(input & 1, input >> 1);
+    output.Pos = float4((output.Tex.x - 0.5f) * 2, -(output.Tex.y - 0.5f) * 2, 0, 1);
     return output;
 }
 
