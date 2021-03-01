@@ -7,7 +7,6 @@ struct WorldViewProjectionConstantBuffer
 	DirectX::XMMATRIX World;
 	DirectX::XMMATRIX View;
 	DirectX::XMMATRIX Projection;
-	DirectX::XMVECTOR Eye;
 };
 
 struct VertexData

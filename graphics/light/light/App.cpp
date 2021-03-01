@@ -3,7 +3,8 @@
 #include "App.h"
 
 App::App() :
-    m_hWnd()
+    m_hWnd(),
+    m_cursor()
 {};
 
 HRESULT App::CreateDesktopWindow(HINSTANCE hInstance, int nCmdShow, WNDPROC pWndProc)

@@ -297,7 +297,6 @@ void Renderer::PostProcessTexture()
 void Renderer::Render()
 {
     m_constantBufferData.View = DirectX::XMMatrixTranspose(m_pCamera->GetViewMatrix());
-    m_constantBufferData.Eye = m_pCamera->GetPosition();
 
     Clear();
 
