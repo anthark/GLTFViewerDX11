@@ -106,7 +106,10 @@ HRESULT App::CreateDeviceResources()
     if (FAILED(hr))
         return hr;
 
-    m_pRenderer = std::shared_ptr<Renderer>(new Renderer(m_pDeviceResources, m_pCamera));
+    m_pSettings = std::shared_ptr<Settings>(new Settings(m_pDeviceResources));
+    m_pSettings->CreateResources(m_hWnd);
+
+    m_pRenderer = std::shared_ptr<Renderer>(new Renderer(m_pDeviceResources, m_pCamera, m_pSettings));
     hr = m_pRenderer->CreateDeviceDependentResources();
     if (FAILED(hr))
         return hr;
@@ -122,6 +125,8 @@ void App::Render()
 
     m_pRenderer->Update();
     m_pRenderer->Render();
+
+    m_pSettings->Render();
 
     m_pDeviceResources->Present();
 

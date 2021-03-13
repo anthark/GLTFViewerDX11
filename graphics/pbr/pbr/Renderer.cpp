@@ -4,9 +4,10 @@
 #include "DDSTextureLoader11.h"
 #include "Utils.h"
 
-Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources, const std::shared_ptr<Camera>& camera) :
+Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources, const std::shared_ptr<Camera>& camera, const std::shared_ptr<Settings>& settings) :
     m_pDeviceResources(deviceResources),
     m_pCamera(camera),
+    m_pSettings(settings),
     m_frameCount(0),
     m_indexCount(0),
     m_constantBufferData(),
@@ -248,10 +249,9 @@ void Renderer::Clear()
     context->ClearDepthStencilView(m_pDeviceResources->GetDepthStencil(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 }
 
-void Renderer::RenderInTexture()
+void Renderer::RenderInTexture(ID3D11RenderTargetView* renderTarget)
 {
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
-    ID3D11RenderTargetView* renderTarget = m_pRenderTexture->GetRenderTargetView();
     ID3D11DepthStencilView* depthStencil = m_pDeviceResources->GetDepthStencil();
 
     D3D11_VIEWPORT viewport = m_pRenderTexture->GetViewPort();
@@ -280,7 +280,18 @@ void Renderer::RenderInTexture()
     context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
     context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
     context->VSSetConstantBuffers(1, 1, m_pLightPositionBuffer.GetAddressOf());
-    context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
+
+    switch (m_pSettings->GetShaderMode())
+    {
+    case Settings::PBRShaderMode::REGULAR:
+        context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
+        break;
+    // TODO: write other cases with right shaders
+    default:
+        context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
+        break;
+    }
+    
     context->PSSetConstantBuffers(2, 1, m_pLightColorBuffer.GetAddressOf());
     context->PSSetShaderResources(0, 1, m_pTexture.GetAddressOf());
     context->PSSetSamplers(0, 1, m_pSamplerLinear.GetAddressOf());
@@ -301,9 +312,15 @@ void Renderer::Render()
 
     Clear();
 
-    RenderInTexture();
-
-    PostProcessTexture();
+    if (m_pSettings->GetShaderMode() == Settings::PBRShaderMode::REGULAR)
+    {
+        RenderInTexture(m_pRenderTexture->GetRenderTargetView());
+        PostProcessTexture();
+    }
+    else
+    {
+        RenderInTexture(m_pDeviceResources->GetRenderTarget());
+    }
 }
 
 Renderer::~Renderer()

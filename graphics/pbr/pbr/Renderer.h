@@ -5,11 +5,12 @@
 #include "ShaderStructures.h"
 #include "ToneMapPostProcess.h"
 #include "Camera.h"
+#include "Settings.h"
 
 class Renderer
 {
 public:
-    Renderer(const std::shared_ptr<DeviceResources>& deviceResources, const std::shared_ptr<Camera>& camera);
+    Renderer(const std::shared_ptr<DeviceResources>& deviceResources, const std::shared_ptr<Camera>& camera, const std::shared_ptr<Settings>& settings);
     ~Renderer();
 
     HRESULT CreateDeviceDependentResources();
@@ -31,13 +32,14 @@ private:
     void UpdatePerspective();
 
     void Clear();
-    void RenderInTexture();
+    void RenderInTexture(ID3D11RenderTargetView* renderTarget);
     void PostProcessTexture();
 
     std::shared_ptr<DeviceResources>      m_pDeviceResources;
     std::unique_ptr<RenderTexture>        m_pRenderTexture;
     std::unique_ptr<ToneMapPostProcess>   m_pToneMap;
     std::shared_ptr<Camera>               m_pCamera;
+    std::shared_ptr<Settings>             m_pSettings;
 
     Microsoft::WRL::ComPtr<ID3D11InputLayout>        m_pInputLayout;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pVertexBuffer;
