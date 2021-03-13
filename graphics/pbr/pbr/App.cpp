@@ -72,11 +72,11 @@ LRESULT App::MouseHandler(UINT uMsg, WPARAM wParam)
     int dx, dy;
     switch (uMsg)
     {
-    case WM_LBUTTONDOWN:
+    case WM_RBUTTONDOWN:
         GetCursorPos(&m_cursor);
         break;
     case WM_MOUSEMOVE:
-        if (wParam == MK_LBUTTON)
+        if (wParam == MK_RBUTTON)
         {
             GetCursorPos(&currPos);
             dx = currPos.x - m_cursor.x;
