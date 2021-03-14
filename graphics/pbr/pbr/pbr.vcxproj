@@ -131,7 +131,6 @@
   <ItemGroup>
     <ClCompile Include="AverageLuminanceProcess.cpp" />
     <ClCompile Include="Camera.cpp" />
-    <ClCompile Include="DDSTextureLoader11.cpp" />
     <ClCompile Include="DeviceResources.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="App.cpp" />
@@ -234,7 +233,6 @@
   <ItemGroup>
     <ClInclude Include="AverageLuminanceProcess.h" />
     <ClInclude Include="Camera.h" />
-    <ClInclude Include="DDSTextureLoader11.h" />
     <ClInclude Include="DeviceResources.h" />
     <ClInclude Include="App.h" />
     <ClInclude Include="pch.h" />

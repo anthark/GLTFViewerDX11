@@ -1,9 +1,5 @@
 #define NUM_LIGHTS 3
 
-Texture2D shaderTexture : register(t0);
-
-SamplerState samLinear : register(s0);
-
 cbuffer Transformation: register(b0)
 {
     matrix World;
@@ -78,5 +74,5 @@ float4 ps_main(PS_INPUT input) : SV_TARGET
     color2 = LightColors[1] * atten2 * dot(lightDir2, input.Normal);
     color3 = LightColors[2] * atten3 * dot(lightDir3, input.Normal);
 
-    return shaderTexture.Sample(samLinear, input.Tex) * (color1 + color2 + color3);
+    return float4(1.0f, 1.0f, 1.0f, 1.0f) * (color1 + color2 + color3);
 }

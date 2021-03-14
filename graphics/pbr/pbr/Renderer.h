@@ -24,8 +24,7 @@ public:
 
 private:
     HRESULT CreateShaders();
-    HRESULT CreateRectangle();
-    HRESULT CreateTexture();
+    HRESULT CreateSphere();
     HRESULT CreateLights();
 
     void UpdatePerspective();
@@ -34,10 +33,10 @@ private:
     void RenderInTexture();
     void PostProcessTexture();
 
-    std::shared_ptr<DeviceResources>      m_pDeviceResources;
     std::unique_ptr<RenderTexture>        m_pRenderTexture;
     std::unique_ptr<ToneMapPostProcess>   m_pToneMap;
     std::shared_ptr<Camera>               m_pCamera;
+    std::shared_ptr<DeviceResources>      m_pDeviceResources;
 
     Microsoft::WRL::ComPtr<ID3D11InputLayout>        m_pInputLayout;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pVertexBuffer;
@@ -47,8 +46,6 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightPositionBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightColorBuffer;
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pTexture;
-    Microsoft::WRL::ComPtr<ID3D11SamplerState>       m_pSamplerLinear;
 
     WorldViewProjectionConstantBuffer m_constantBufferData;
     LightPositionConstantBuffer       m_lightPositionBufferData;
