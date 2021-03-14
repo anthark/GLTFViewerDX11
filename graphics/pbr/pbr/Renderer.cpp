@@ -66,7 +66,7 @@ HRESULT Renderer::CreateSphere()
 {
     HRESULT hr = S_OK;
 
-    const int numLines = 5;
+    const int numLines = 16;
     const float spacing = 1.0f / numLines;
 
     // Create vertex buffer
