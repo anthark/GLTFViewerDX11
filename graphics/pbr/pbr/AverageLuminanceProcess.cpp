@@ -153,7 +153,7 @@ float AverageLuminanceProcess::Process(ID3D11DeviceContext* context, ID3D11Shade
     float sigma = 0.04f / (0.04f + luminance);
     float tau = sigma * 0.4f + (1 - sigma) * 0.1f;
     m_adaptedLuminance += (luminance - m_adaptedLuminance) * static_cast<float>(1 - std::exp(-delta * tau));
-    return luminance;//m_adaptedLuminance;
+    return m_adaptedLuminance;
 }
 
 AverageLuminanceProcess::~AverageLuminanceProcess()

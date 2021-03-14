@@ -26,7 +26,7 @@ HRESULT App::CreateDesktopWindow(HINSTANCE hInstance, int nCmdShow, WNDPROC pWnd
         return E_FAIL;
 
     // Create window
-    RECT rc = { 0, 0, 800, 600 };
+    RECT rc = { 0, 0, 1000, 800 };
     AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
     m_hWnd = CreateWindow(CLASS_NAME, L"Lab3", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
         rc.right - rc.left, rc.bottom - rc.top, nullptr, nullptr, hInstance, nullptr);
@@ -55,12 +55,6 @@ LRESULT App::KeyHandler(WPARAM wParam, LPARAM lParam)
         break;
     case 68: // D
         m_pCamera->MovePerpendicular(cameraSpeed);
-        break;
-    case 81: // Q
-        m_pRenderer->UpdateLightColor(0, 10.0f);
-        break;
-    case 69: // E
-        m_pRenderer->UpdateLightColor(0, 0.1f);
         break;
     default:
         break;

@@ -6,7 +6,8 @@
 
 Settings::Settings(const std::shared_ptr<DeviceResources>& deviceResources):
     m_pDeviceResources(deviceResources),
-    m_shaderMode(PBRShaderMode::REGULAR)
+    m_shaderMode(PBRShaderMode::REGULAR),
+    m_strengths()
 {};
 
 void Settings::CreateResources(HWND hWnd)
@@ -25,10 +26,15 @@ void Settings::Render()
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
 
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
+    ImGui::SetNextWindowSize(ImVec2(500, 150), ImGuiCond_Once);
     ImGui::Begin("Settings");
 
     static const char* shaderModes[] = { "Regular", "Normal distribution", "Geometry", "Fresnel" };
     ImGui::Combo("Shader mode", reinterpret_cast<int*>(&m_shaderMode), shaderModes, IM_ARRAYSIZE(shaderModes));
+
+    for (size_t i = 0; i < NUM_LIGHTS; ++i)
+        ImGui::SliderFloat((std::string("Strength of ") + std::to_string(i) + std::string(" light")).c_str(), m_strengths + i, 0.0f, 1000.0f);
 
     ImGui::End();
 
@@ -38,6 +44,13 @@ void Settings::Render()
     ID3D11DepthStencilView* depthStencil = m_pDeviceResources->GetDepthStencil();
     m_pDeviceResources->GetDeviceContext()->OMSetRenderTargets(1, &renderTarget, depthStencil);
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+}
+
+float Settings::GetLightStrength(UINT index) const
+{
+    if (index >= NUM_LIGHTS)
+        return 0.0f;
+    return m_strengths[index];
 }
 
 Settings::~Settings()

@@ -186,15 +186,15 @@ HRESULT Renderer::CreateLights()
 
     DirectX::XMFLOAT4 LightPositions[NUM_LIGHTS] =
     {
-        DirectX::XMFLOAT4(0.0f, 0.0f, 3.0f, 1.0f),
-        DirectX::XMFLOAT4(0.0f, 0.0f, 3.0f, 1.0f),
-        DirectX::XMFLOAT4(0.0f, 0.0f, 3.0f, 1.0f)
+        DirectX::XMFLOAT4(0.0f, 0.0f, 3.0f, 0.0f),
+        DirectX::XMFLOAT4(0.0f, 0.0f, -3.0f, 0.0f),
+        DirectX::XMFLOAT4(2.0f, 2.0f, 1.0f, 0.0f)
     };
 
     DirectX::XMFLOAT4 LightColors[NUM_LIGHTS] =
     {
-        DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f),
-        DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f),
+        DirectX::XMFLOAT4(1.0f, 0.9f, 0.8f, 1.0f),
+        DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
         DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)
     };
 
@@ -220,12 +220,6 @@ HRESULT Renderer::CreateLights()
     hr = m_pDeviceResources->GetDevice()->CreateBuffer(&lcbd, nullptr, &m_pLightColorBuffer);
 
     return hr;
-}
-
-void Renderer::UpdateLightColor(UINT index, float factor)
-{
-    if (index < NUM_LIGHTS)
-        m_lightColorBufferData.LightColor[index].w *= factor;
 }
 
 HRESULT Renderer::CreateWindowSizeDependentResources()
@@ -270,13 +264,16 @@ void Renderer::Update()
     
     m_constantBufferData.View = DirectX::XMMatrixTranspose(m_pCamera->GetViewMatrix());
     DirectX::XMStoreFloat4(&m_constantBufferData.CameraPos, m_pCamera->GetPosition());
+
+    for (UINT i = 0; i < NUM_LIGHTS; ++i)
+        m_lightColorBufferData.LightColor[i].w = m_pSettings->GetLightStrength(i);
 }
 
 void Renderer::Clear()
 {
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
 
-    float backgroundColour[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
+    float backgroundColour[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
     context->ClearRenderTargetView(m_pRenderTexture->GetRenderTargetView(), backgroundColour);
     context->ClearRenderTargetView(m_pDeviceResources->GetRenderTarget(), backgroundColour);
     context->ClearDepthStencilView(m_pDeviceResources->GetDepthStencil(), D3D11_CLEAR_DEPTH, 1.0f, 0);
@@ -343,8 +340,8 @@ void Renderer::RenderInTexture(ID3D11RenderTargetView* renderTarget)
         for (int j = 0; j < sphereGridSize; j++)
         {
             m_constantBufferData.World = DirectX::XMMatrixTranspose(DirectX::XMMatrixTranslation(
-                gridWidth * (i / (sphereGridSize - 1.0f) - sphereRadius),
-                gridWidth * (j / (sphereGridSize - 1.0f) - sphereRadius),
+                gridWidth * (i / (sphereGridSize - 1.0f) - 0.5f),
+                gridWidth * (j / (sphereGridSize - 1.0f) - 0.5f),
                 0
             ));
             context->UpdateSubresource(m_pConstantBuffer.Get(), 0, nullptr, &m_constantBufferData, 0, 0);

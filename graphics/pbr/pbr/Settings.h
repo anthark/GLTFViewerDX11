@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DeviceResources.h"
+#include "ShaderStructures.h"
 #include "../../ImGui/imgui.h"
 
 class Settings
@@ -20,6 +21,7 @@ public:
     void CreateResources(HWND hWnd);
 
     PBRShaderMode GetShaderMode() const { return m_shaderMode; };
+    float GetLightStrength(UINT index) const;
 
     void Render();
 
@@ -27,4 +29,6 @@ private:
     std::shared_ptr<DeviceResources> m_pDeviceResources;
 
     PBRShaderMode m_shaderMode;
+
+    float m_strengths[NUM_LIGHTS];
 };

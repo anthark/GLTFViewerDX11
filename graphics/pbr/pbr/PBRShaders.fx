@@ -61,13 +61,13 @@ float3 h(float3 v, float3 l)
 
 float normalDistribution(float3 n, float3 v, float3 l)
 {
-    float roughnessSqr = pow(max(Roughness, 0.0001f), 2);
+    float roughnessSqr = pow(max(Roughness, 0.01f), 2);
 	return roughnessSqr / (PI * pow(pow(max(dot(n, h(v, l)), 0), 2) * (roughnessSqr - 1) + 1, 2));
 }
 
 float4 ndps_main(PS_INPUT input) : SV_TARGET
 {
-	return normalDistribution(input.Normal, normalize(CameraPos.xyz - input.WorldPos.xyz), normalize(LightPositions[0] - input.WorldPos.xyz));
+    return normalDistribution(normalize(input.Normal), normalize(CameraPos.xyz - input.WorldPos.xyz), normalize(LightPositions[0] - input.WorldPos.xyz));
 }
 
 float SchlickGGX(float3 n, float3 v, float k)
@@ -84,7 +84,7 @@ float geometry(float3 n, float3 v, float3 l)
 
 float4 gps_main(PS_INPUT input) : SV_TARGET
 {
-	return geometry(input.Normal, normalize(CameraPos.xyz - input.WorldPos.xyz), normalize(LightPositions[0] - input.WorldPos.xyz));
+    return geometry(normalize(input.Normal), normalize(CameraPos.xyz - input.WorldPos.xyz), normalize(LightPositions[0] - input.WorldPos.xyz));
 }
 
 float3 fresnel(float3 n, float3 v, float3 l)
@@ -95,7 +95,7 @@ float3 fresnel(float3 n, float3 v, float3 l)
 
 float4 fps_main(PS_INPUT input) : SV_TARGET
 {
-	return float4(fresnel(input.Normal, normalize(CameraPos.xyz - input.WorldPos.xyz), normalize(LightPositions[0] - input.WorldPos.xyz)), 1.0f);
+    return float4(fresnel(normalize(input.Normal), normalize(CameraPos.xyz - input.WorldPos.xyz), normalize(LightPositions[0] - input.WorldPos.xyz)), 1.0f);
 }
 
 float3 BRDF(float3 p, float3 n, float3 v, float3 l)
@@ -104,7 +104,7 @@ float3 BRDF(float3 p, float3 n, float3 v, float3 l)
 	float G = geometry(n, v, l);
 	float3 F = fresnel(n, v, l);
 
-	return (1 - F) * Albedo / PI * (1 - Metalness) + D * F * G / (0.0001f + 4 * (max(dot(l, n), 0) * max(dot(v, n), 0)));
+	return (1 - F) * Albedo / PI * (1 - Metalness) + D * F * G / (0.001f + 4 * (max(dot(l, n), 0) * max(dot(v, n), 0)));
 }
 
 float Attenuation(float3 lightDir)
@@ -117,17 +117,18 @@ float3 LO_i(float3 p, float3 n, float3 v, float3 lightDir, float4 lightColor)
 {
 	float atten = Attenuation(lightDir);
 	float3 l = normalize(lightDir);
-	return BRDF(p, n, v, l) * lightColor.rgb * atten * max(dot(l, n), 0) * lightColor.a;
+    return BRDF(p, n, v, l) * lightColor.rgb * atten * max(dot(l, n), 0) * lightColor.a;
 }
 
 float4 ps_main(PS_INPUT input) : SV_TARGET
 {
 	float3 color1, color2, color3;
 	float3 v = normalize(CameraPos.xyz - input.WorldPos.xyz);
+    float3 n = normalize(input.Normal);
 
-	color1 = LO_i(input.WorldPos.xyz, input.Normal, v, LightPositions[0] - input.WorldPos.xyz, LightColors[0]);
-	color2 = LO_i(input.WorldPos.xyz, input.Normal, v, LightPositions[1] - input.WorldPos.xyz, LightColors[1]);
-	color3 = LO_i(input.WorldPos.xyz, input.Normal, v, LightPositions[2] - input.WorldPos.xyz, LightColors[2]);
+	color1 = LO_i(input.WorldPos.xyz, n, v, LightPositions[0] - input.WorldPos.xyz, LightColors[0]);
+	color2 = LO_i(input.WorldPos.xyz, n, v, LightPositions[1] - input.WorldPos.xyz, LightColors[1]);
+	color3 = LO_i(input.WorldPos.xyz, n, v, LightPositions[2] - input.WorldPos.xyz, LightColors[2]);
 
 	return float4(color1 + color2 + color3 + Albedo * 0.3, 1.0f);
 }

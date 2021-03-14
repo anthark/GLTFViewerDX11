@@ -18,8 +18,6 @@ public:
     
     HRESULT OnResize();
 
-    void UpdateLightColor(UINT index, float factor);
-
     void Update();
     void Render();
 
