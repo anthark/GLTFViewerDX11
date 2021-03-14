@@ -4,6 +4,7 @@
 
 std::shared_ptr<App> g_pApp;
 
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR pCmdLine, _In_ int nCmdShow)
@@ -27,6 +28,9 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     HRESULT hr;
+    
+    if (ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam))
+        return true;
 
     switch (uMsg)
     {
@@ -37,7 +41,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         break;
     case WM_KEYDOWN:
         return g_pApp->KeyHandler(wParam, lParam);
-    case WM_LBUTTONDOWN:
+    case WM_RBUTTONDOWN:
     case WM_MOUSEMOVE:
         return g_pApp->MouseHandler(uMsg, wParam);
     case WM_DESTROY:

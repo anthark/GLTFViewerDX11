@@ -3,6 +3,7 @@
 #include "DeviceResources.h"
 #include "Renderer.h"
 #include "Camera.h"
+#include "Settings.h"
 
 class App
 {
@@ -29,4 +30,5 @@ private:
     std::shared_ptr<DeviceResources> m_pDeviceResources;
     std::shared_ptr<Renderer>        m_pRenderer;
     std::shared_ptr<Camera>          m_pCamera;
+    std::shared_ptr<Settings>        m_pSettings;
 };
