@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Shaders">
-      <UniqueIdentifier>{18ec88c5-da7b-4f4f-8270-bd9f08b53d24}</UniqueIdentifier>
-    </Filter>
     <Filter Include="PostProcessShaders">
       <UniqueIdentifier>{bb56209f-b058-4970-b7ae-e37275c9eee4}</UniqueIdentifier>
     </Filter>
@@ -24,6 +21,9 @@
     </Filter>
     <Filter Include="Файлы заголовков\ImGui">
       <UniqueIdentifier>{ae4e350f-3e4e-4957-8176-c229c7f7a0fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PBRShaders">
+      <UniqueIdentifier>{18ec88c5-da7b-4f4f-8270-bd9f08b53d24}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -80,15 +80,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="PixelShader.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders.fx">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="VertexShader.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
     <FxCompile Include="PostProcessShaders.fx">
       <Filter>PostProcessShaders</Filter>
     </FxCompile>
@@ -103,6 +94,24 @@
     </FxCompile>
     <FxCompile Include="LuminancePixelShader.hlsl">
       <Filter>PostProcessShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="PBRShaders.fx">
+      <Filter>PBRShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="PBRVertexShader.hlsl">
+      <Filter>PBRShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="PBRPixelShader.hlsl">
+      <Filter>PBRShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="NDPixelShader.hlsl">
+      <Filter>PBRShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="GPixelShader.hlsl">
+      <Filter>PBRShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="FPixelShader.hlsl">
+      <Filter>PBRShaders</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

@@ -45,13 +45,18 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pIndexBuffer;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pVertexShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pPixelShader;
+    Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pNDPixelShader;
+    Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pGPixelShader;
+    Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pFPixelShader;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightPositionBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightColorBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pMaterialBuffer;
 
     WorldViewProjectionConstantBuffer m_constantBufferData;
     LightPositionConstantBuffer       m_lightPositionBufferData;
     LightColorConstantBuffer          m_lightColorBufferData;
+    MaterialConstantBuffer            m_materialBufferData;
     
     UINT32 m_indexCount;
     UINT32 m_frameCount;

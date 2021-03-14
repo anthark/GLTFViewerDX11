@@ -40,19 +40,21 @@ HRESULT App::CreateDesktopWindow(HINSTANCE hInstance, int nCmdShow, WNDPROC pWnd
 
 LRESULT App::KeyHandler(WPARAM wParam, LPARAM lParam)
 {
+    float cameraSpeed = 0.1f;
+
     switch (wParam)
     {
     case 87: // W
-        m_pCamera->MoveDirection(1.0f);
+        m_pCamera->MoveDirection(cameraSpeed);
         break;
     case 65: // A
-        m_pCamera->MovePerpendicular(1.0f);
+        m_pCamera->MovePerpendicular(-cameraSpeed);
         break;
     case 83: // S
-        m_pCamera->MoveDirection(-1.0f);
+        m_pCamera->MoveDirection(-cameraSpeed);
         break;
     case 68: // D
-        m_pCamera->MovePerpendicular(-1.0f);
+        m_pCamera->MovePerpendicular(cameraSpeed);
         break;
     case 81: // Q
         m_pRenderer->UpdateLightColor(0, 10.0f);

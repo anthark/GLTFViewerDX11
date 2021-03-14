@@ -18,7 +18,8 @@ Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources, cons
     m_indexCount(0),
     m_constantBufferData(),
     m_lightColorBufferData(),
-    m_lightPositionBufferData()
+    m_lightPositionBufferData(),
+    m_materialBufferData()
 {};
 
 HRESULT Renderer::CreateShaders()
@@ -29,7 +30,7 @@ HRESULT Renderer::CreateShaders()
     ID3D11Device* device = m_pDeviceResources->GetDevice();
 
     // Create the vertex shader
-    hr = CreateVertexShader(device, L"VertexShader.cso", bytes, &m_pVertexShader);
+    hr = CreateVertexShader(device, L"PBRVertexShader.cso", bytes, &m_pVertexShader);
     if (FAILED(hr))
         return hr;
 
@@ -48,7 +49,22 @@ HRESULT Renderer::CreateShaders()
         return hr;
 
     // Create the pixel shader
-    hr = CreatePixelShader(device, L"PixelShader.cso", bytes, &m_pPixelShader);
+    hr = CreatePixelShader(device, L"PBRPixelShader.cso", bytes, &m_pPixelShader);
+    if (FAILED(hr))
+        return hr;
+
+    // Create the pixel shader for normal distribution function
+    hr = CreatePixelShader(device, L"NDPixelShader.cso", bytes, &m_pNDPixelShader);
+    if (FAILED(hr))
+        return hr;
+
+    // Create the pixel shader for geometry function
+    hr = CreatePixelShader(device, L"GPixelShader.cso", bytes, &m_pGPixelShader);
+    if (FAILED(hr))
+        return hr;
+
+    // Create the pixel shader for fresnel function
+    hr = CreatePixelShader(device, L"FPixelShader.cso", bytes, &m_pFPixelShader);
     if (FAILED(hr))
         return hr;
 
@@ -58,6 +74,15 @@ HRESULT Renderer::CreateShaders()
         D3D11_BIND_CONSTANT_BUFFER
     );
     hr = m_pDeviceResources->GetDevice()->CreateBuffer(&cbd, nullptr, &m_pConstantBuffer);
+    if (FAILED(hr))
+        return hr;
+
+    // Create the constant buffer for material variables
+    CD3D11_BUFFER_DESC cbmd(
+        sizeof(MaterialConstantBuffer),
+        D3D11_BIND_CONSTANT_BUFFER
+    );
+    hr = m_pDeviceResources->GetDevice()->CreateBuffer(&cbmd, nullptr, &m_pMaterialBuffer);
 
     return hr;
 }
@@ -129,7 +154,7 @@ HRESULT Renderer::CreateSphere()
 void Renderer::UpdatePerspective()
 {
     m_constantBufferData.Projection = DirectX::XMMatrixTranspose(
-        DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, m_pDeviceResources->GetAspectRatio(), 0.01f, 1000.0f)
+        DirectX::XMMatrixPerspectiveFovRH(DirectX::XM_PIDIV2, m_pDeviceResources->GetAspectRatio(), 0.01f, 1000.0f)
     );
 }
 
@@ -246,13 +271,16 @@ void Renderer::Update()
 
     if (m_frameCount == MAXUINT)
         m_frameCount = 0;
+    
+    m_constantBufferData.View = DirectX::XMMatrixTranspose(m_pCamera->GetViewMatrix());
+    DirectX::XMStoreFloat4(&m_constantBufferData.CameraPos, m_pCamera->GetPosition());
 }
 
 void Renderer::Clear()
 {
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
 
-    float backgroundColour[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    float backgroundColour[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
     context->ClearRenderTargetView(m_pRenderTexture->GetRenderTargetView(), backgroundColour);
     context->ClearRenderTargetView(m_pDeviceResources->GetRenderTarget(), backgroundColour);
     context->ClearDepthStencilView(m_pDeviceResources->GetDepthStencil(), D3D11_CLEAR_DEPTH, 1.0f, 0);
@@ -287,23 +315,33 @@ void Renderer::RenderInTexture(ID3D11RenderTargetView* renderTarget)
     // Render spheres
     context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
     context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
-    context->VSSetConstantBuffers(1, 1, m_pLightPositionBuffer.GetAddressOf());
+    context->PSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
+    context->PSSetConstantBuffers(1, 1, m_pLightPositionBuffer.GetAddressOf());
 
     switch (m_pSettings->GetShaderMode())
     {
     case Settings::PBRShaderMode::REGULAR:
         context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
         break;
-    // TODO: write other cases with right shaders
+    case Settings::PBRShaderMode::NORMAL_DISTRIBUTION:
+        context->PSSetShader(m_pNDPixelShader.Get(), nullptr, 0);
+        break;
+    case Settings::PBRShaderMode::GEOMETRY:
+        context->PSSetShader(m_pGPixelShader.Get(), nullptr, 0);
+        break;
+    case Settings::PBRShaderMode::FRESNEL:
+        context->PSSetShader(m_pFPixelShader.Get(), nullptr, 0);
+        break;
     default:
         context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
         break;
     }
     
     context->PSSetConstantBuffers(2, 1, m_pLightColorBuffer.GetAddressOf());
-    
+
     const int sphereGridSize = 10;
     const float gridWidth = 5;
+    m_materialBufferData.Albedo = DirectX::XMFLOAT3(0.0f, 0.0f, 1.0f);
     for (int i = 0; i < sphereGridSize; i++)
     {
         for (int j = 0; j < sphereGridSize; j++)
@@ -314,6 +352,10 @@ void Renderer::RenderInTexture(ID3D11RenderTargetView* renderTarget)
                 0
             ));
             context->UpdateSubresource(m_pConstantBuffer.Get(), 0, nullptr, &m_constantBufferData, 0, 0);
+            m_materialBufferData.Roughness = i / (sphereGridSize - 1.0f);
+            m_materialBufferData.Metalness = j / (sphereGridSize - 1.0f);
+            context->UpdateSubresource(m_pMaterialBuffer.Get(), 0, nullptr, &m_materialBufferData, 0, 0);
+            context->PSSetConstantBuffers(3, 1, m_pMaterialBuffer.GetAddressOf());
             context->DrawIndexed(m_indexCount, 0, 0);
         }
     }
@@ -328,8 +370,6 @@ void Renderer::PostProcessTexture()
 
 void Renderer::Render()
 {
-    m_constantBufferData.View = DirectX::XMMatrixTranspose(m_pCamera->GetViewMatrix());
-
     Clear();
 
     if (m_pSettings->GetShaderMode() == Settings::PBRShaderMode::REGULAR)

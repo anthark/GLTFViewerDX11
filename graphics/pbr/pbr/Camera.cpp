@@ -33,7 +33,7 @@ DirectX::XMVECTOR Camera::GetPerpendicular() const
 
 DirectX::XMMATRIX Camera::GetViewMatrix() const
 {
-    return DirectX::XMMatrixLookAtLH(m_eye, DirectX::XMVectorAdd(m_eye, m_viewDir), m_up);
+    return DirectX::XMMatrixLookAtRH(m_eye, DirectX::XMVectorAdd(m_eye, m_viewDir), m_up);
 }
 
 Camera::~Camera()

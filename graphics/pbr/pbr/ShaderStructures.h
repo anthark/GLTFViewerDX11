@@ -7,6 +7,7 @@ struct WorldViewProjectionConstantBuffer
 	DirectX::XMMATRIX World;
 	DirectX::XMMATRIX View;
 	DirectX::XMMATRIX Projection;
+	DirectX::XMFLOAT4 CameraPos;
 };
 
 struct VertexData
@@ -30,4 +31,12 @@ __declspec(align(16))
 struct LuminanceConstantBuffer
 {
 	float AverageLuminance;
+};
+
+__declspec(align(16))
+struct MaterialConstantBuffer
+{
+	DirectX::XMFLOAT3 Albedo;
+	float Roughness;
+	float Metalness;
 };
