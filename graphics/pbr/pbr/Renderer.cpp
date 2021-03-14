@@ -225,11 +225,7 @@ HRESULT Renderer::CreateLights()
 void Renderer::UpdateLightColor(UINT index, float factor)
 {
     if (index < NUM_LIGHTS)
-    {
-        m_lightColorBufferData.LightColor[index].x *= factor;
-        m_lightColorBufferData.LightColor[index].y *= factor;
-        m_lightColorBufferData.LightColor[index].z *= factor;
-    }
+        m_lightColorBufferData.LightColor[index].w *= factor;
 }
 
 HRESULT Renderer::CreateWindowSizeDependentResources()
