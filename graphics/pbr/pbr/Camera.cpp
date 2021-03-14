@@ -3,9 +3,9 @@
 #include "Camera.h"
 
 Camera::Camera() :
-    m_eye(DirectX::XMVectorSet(0.0f, 40.0f, -20.0f, 0.0f)),
-    m_viewDir(DirectX::XMVector4Normalize(DirectX::XMVectorSet(0.0f, -2.0f, 1.0f, 0.0f))),
-    m_up(DirectX::XMVector4Normalize(DirectX::XMVectorSet(0.0f, 1.0f, 2.0f, 0.0f)))
+    m_eye(DirectX::XMVectorSet(0.0f, 0.0f, 5.0f, 0.0f)),
+    m_viewDir(DirectX::XMVector4Normalize(DirectX::XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f))),
+    m_up(DirectX::XMVector4Normalize(DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)))
 {};
 
 void Camera::MoveDirection(float delta)

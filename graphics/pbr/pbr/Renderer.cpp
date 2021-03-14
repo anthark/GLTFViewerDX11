@@ -1,8 +1,14 @@
 #include "pch.h"
 
+#define _USE_MATH_DEFINES
+
+#include <math.h>
+#include <vector>
+
 #include "Renderer.h"
-#include "DDSTextureLoader11.h"
 #include "Utils.h"
+
+const float sphereRadius = 0.5f;
 
 Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources, const std::shared_ptr<Camera>& camera, const std::shared_ptr<Settings>& settings) :
     m_pDeviceResources(deviceResources),
@@ -56,59 +62,66 @@ HRESULT Renderer::CreateShaders()
     return hr;
 }
 
-HRESULT Renderer::CreateRectangle()
+HRESULT Renderer::CreateSphere()
 {
     HRESULT hr = S_OK;
 
+    const int numLines = 5;
+    const float spacing = 1.0f / numLines;
+
     // Create vertex buffer
-    VertexData vertices[] =
+    std::vector<VertexData> vertices;
+    for (int latitude = 0; latitude <= numLines; latitude++)
     {
-        {DirectX::XMFLOAT3(-256.0f, 0.0f, -144.0f), DirectX::XMFLOAT2(0.0f, 0.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
-        {DirectX::XMFLOAT3(-256.0f, 0.0f, 144.0f), DirectX::XMFLOAT2(0.0f, 1.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
-        {DirectX::XMFLOAT3(256.0f, 0.0f, 144.0f), DirectX::XMFLOAT2(1.0f, 1.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
-        {DirectX::XMFLOAT3(256.0f, 0.0f, -144.0f), DirectX::XMFLOAT2(1.0f, 0.0f), DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f)},
-    };
-    CD3D11_BUFFER_DESC vbd(sizeof(VertexData) * ARRAYSIZE(vertices), D3D11_BIND_VERTEX_BUFFER);
+        for (int longitude = 0; longitude <= numLines; longitude++)
+        {
+            VertexData v;
+
+            v.Tex = DirectX::XMFLOAT2(longitude * spacing, 1.0f - latitude * spacing);
+
+            float theta = v.Tex.x * 2.0f * static_cast<float>(M_PI);
+            float phi = (v.Tex.y - 0.5f) * static_cast<float>(M_PI);
+            float c = static_cast<float>(cos(phi));
+
+            v.Normal = DirectX::XMFLOAT3(
+                c * static_cast<float>(cos(theta)) * sphereRadius,
+                    static_cast<float>(sin(phi)) * sphereRadius,
+                c * static_cast<float>(sin(theta)) * sphereRadius
+            );
+            v.Pos = DirectX::XMFLOAT3(v.Normal.x * sphereRadius, v.Normal.y * sphereRadius, v.Normal.z * sphereRadius);
+
+            vertices.push_back(v);
+        }
+    }
+
+    CD3D11_BUFFER_DESC vbd(sizeof(VertexData) * static_cast<UINT>(vertices.size()), D3D11_BIND_VERTEX_BUFFER);
     D3D11_SUBRESOURCE_DATA initData;
     ZeroMemory(&initData, sizeof(D3D11_SUBRESOURCE_DATA));
-    initData.pSysMem = vertices;
+    initData.pSysMem = vertices.data();
     hr = m_pDeviceResources->GetDevice()->CreateBuffer(&vbd, &initData, &m_pVertexBuffer);
     if (FAILED(hr))
         return hr;
 
     // Create index buffer
-    WORD indices[] =
+    std::vector<WORD> indices;
+    for (int latitude = 0; latitude < numLines; latitude++)
     {
-        0, 1, 2,
-        2, 3, 0,
-    };
-    m_indexCount = ARRAYSIZE(indices);
-    CD3D11_BUFFER_DESC ibd(sizeof(indices) * m_indexCount, D3D11_BIND_INDEX_BUFFER);
-    initData.pSysMem = indices;
+        for (int longitude = 0; longitude < numLines; longitude++)
+        {
+            indices.push_back(latitude * (numLines + 1) + longitude);
+            indices.push_back((latitude + 1) * (numLines + 1) + longitude);
+            indices.push_back(latitude * (numLines + 1) + (longitude + 1));
+
+            indices.push_back(latitude * (numLines + 1) + (longitude + 1));
+            indices.push_back((latitude + 1) * (numLines + 1) + longitude);
+            indices.push_back((latitude + 1) * (numLines + 1) + (longitude + 1));
+        }
+    }
+
+    m_indexCount = static_cast<UINT32>(indices.size());
+    CD3D11_BUFFER_DESC ibd(sizeof(WORD) * m_indexCount, D3D11_BIND_INDEX_BUFFER);
+    initData.pSysMem = indices.data();
     hr = m_pDeviceResources->GetDevice()->CreateBuffer(&ibd, &initData, &m_pIndexBuffer);
-
-    return hr;
-}
-
-HRESULT Renderer::CreateTexture()
-{
-    HRESULT hr = S_OK;
-
-    hr = DirectX::CreateDDSTextureFromFileEx(m_pDeviceResources->GetDevice(), nullptr, L"stone.dds", 0,
-        D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, true, nullptr, &m_pTexture);
-    if (FAILED(hr))
-        return hr;
-
-    D3D11_SAMPLER_DESC sd;
-    ZeroMemory(&sd, sizeof(sd));
-    sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    sd.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-    sd.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-    sd.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-    sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
-    sd.MinLOD = 0;
-    sd.MaxLOD = D3D11_FLOAT32_MAX;
-    hr = m_pDeviceResources->GetDevice()->CreateSamplerState(&sd, &m_pSamplerLinear);
 
     return hr;
 }
@@ -128,11 +141,7 @@ HRESULT Renderer::CreateDeviceDependentResources()
     if (FAILED(hr))
         return hr;
 
-    hr = CreateRectangle();
-    if (FAILED(hr))
-        return hr;
-
-    hr = CreateTexture();
+    hr = CreateSphere();
     if (FAILED(hr))
         return hr;
 
@@ -152,9 +161,9 @@ HRESULT Renderer::CreateLights()
 
     DirectX::XMFLOAT4 LightPositions[NUM_LIGHTS] =
     {
-        DirectX::XMFLOAT4(4.0f, 10.0f, -5.0f, 1.0f),
-        DirectX::XMFLOAT4(-4.0f, 10.0f, -5.0f, 1.0f),
-        DirectX::XMFLOAT4(0.0f, 10.0f, 2.0f, 1.0f)
+        DirectX::XMFLOAT4(0.0f, 0.0f, 3.0f, 1.0f),
+        DirectX::XMFLOAT4(0.0f, 0.0f, 3.0f, 1.0f),
+        DirectX::XMFLOAT4(0.0f, 0.0f, 3.0f, 1.0f)
     };
 
     DirectX::XMFLOAT4 LightColors[NUM_LIGHTS] =
@@ -270,13 +279,12 @@ void Renderer::RenderInTexture(ID3D11RenderTargetView* renderTarget)
     // Set primitive topology
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    context->UpdateSubresource(m_pConstantBuffer.Get(), 0, nullptr, &m_constantBufferData, 0, 0);
     context->UpdateSubresource(m_pLightPositionBuffer.Get(), 0, nullptr, &m_lightPositionBufferData, 0, 0);
     context->UpdateSubresource(m_pLightColorBuffer.Get(), 0, nullptr, &m_lightColorBufferData, 0, 0);
 
     context->IASetInputLayout(m_pInputLayout.Get());
 
-    // Render a triangle
+    // Render spheres
     context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
     context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
     context->VSSetConstantBuffers(1, 1, m_pLightPositionBuffer.GetAddressOf());
@@ -293,10 +301,22 @@ void Renderer::RenderInTexture(ID3D11RenderTargetView* renderTarget)
     }
     
     context->PSSetConstantBuffers(2, 1, m_pLightColorBuffer.GetAddressOf());
-    context->PSSetShaderResources(0, 1, m_pTexture.GetAddressOf());
-    context->PSSetSamplers(0, 1, m_pSamplerLinear.GetAddressOf());
     
-    context->DrawIndexed(m_indexCount, 0, 0);
+    const int sphereGridSize = 10;
+    const float gridWidth = 5;
+    for (int i = 0; i < sphereGridSize; i++)
+    {
+        for (int j = 0; j < sphereGridSize; j++)
+        {
+            m_constantBufferData.World = DirectX::XMMatrixTranspose(DirectX::XMMatrixTranslation(
+                gridWidth * (i / (sphereGridSize - 1.0f) - sphereRadius),
+                gridWidth * (j / (sphereGridSize - 1.0f) - sphereRadius),
+                0
+            ));
+            context->UpdateSubresource(m_pConstantBuffer.Get(), 0, nullptr, &m_constantBufferData, 0, 0);
+            context->DrawIndexed(m_indexCount, 0, 0);
+        }
+    }
 }
 
 void Renderer::PostProcessTexture()
