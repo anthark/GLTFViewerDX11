@@ -7,6 +7,7 @@
 
 #include "Renderer.h"
 #include "Utils.h"
+#include "WICTextureLoader.h"
 
 const float sphereRadius = 0.5f;
 
@@ -29,8 +30,8 @@ HRESULT Renderer::CreateShaders()
     std::vector<BYTE> bytes;
     ID3D11Device* device = m_pDeviceResources->GetDevice();
 
-    // Create the vertex shader
-    hr = CreateVertexShader(device, L"PBRVertexShader.cso", bytes, &m_pVertexShader);
+    // Create the vertex shader for environment
+    hr = CreateVertexShader(device, L"EnvironmentVertexShader.cso", bytes, &m_pEnvironmentVertexShader);
     if (FAILED(hr))
         return hr;
 
@@ -45,6 +46,16 @@ HRESULT Renderer::CreateShaders()
 
     // Create the input layout
     hr = m_pDeviceResources->GetDevice()->CreateInputLayout(layout, numElements, bytes.data(), bytes.size(), &m_pInputLayout);
+    if (FAILED(hr))
+        return hr;
+
+    // Create the pixel shader for environment
+    hr = CreatePixelShader(device, L"EnvironmentPixelShader.cso", bytes, &m_pEnvironmentPixelShader);
+    if (FAILED(hr))
+        return hr;
+
+    // Create the vertex shader
+    hr = CreateVertexShader(device, L"PBRVertexShader.cso", bytes, &m_pVertexShader);
     if (FAILED(hr))
         return hr;
 
@@ -147,6 +158,40 @@ HRESULT Renderer::CreateSphere()
     CD3D11_BUFFER_DESC ibd(sizeof(WORD) * m_indexCount, D3D11_BIND_INDEX_BUFFER);
     initData.pSysMem = indices.data();
     hr = m_pDeviceResources->GetDevice()->CreateBuffer(&ibd, &initData, &m_pIndexBuffer);
+    if (FAILED(hr))
+        return hr;
+
+    // Create vertex buffer for environment sphere
+    for (VertexData& v : vertices)
+    {
+        DirectX::XMStoreFloat3(&v.Pos, DirectX::XMVectorNegate(DirectX::XMLoadFloat3(&v.Pos)));
+        DirectX::XMStoreFloat3(&v.Normal, DirectX::XMVectorNegate(DirectX::XMLoadFloat3(&v.Normal)));
+    }
+    initData.pSysMem = vertices.data();
+    hr = m_pDeviceResources->GetDevice()->CreateBuffer(&vbd, &initData, &m_pEnvironmentVertexBuffer);
+
+    return hr;
+}
+
+HRESULT Renderer::CreateTexture()
+{
+    HRESULT hr = S_OK;
+
+    hr = CreateWICTextureFromFile(m_pDeviceResources->GetDevice(), m_pDeviceResources->GetDeviceContext(), L"sphere.jpg",
+        &m_pEnvironmentTexture, &m_pEnvironmentShaderResourceView);
+    if (FAILED(hr))
+        return hr;
+
+    D3D11_SAMPLER_DESC sd;
+    ZeroMemory(&sd, sizeof(sd));
+    sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    sd.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    sd.MinLOD = 0;
+    sd.MaxLOD = D3D11_FLOAT32_MAX;
+    hr = m_pDeviceResources->GetDevice()->CreateSamplerState(&sd, &m_pSamplerLinear);
 
     return hr;
 }
@@ -167,6 +212,10 @@ HRESULT Renderer::CreateDeviceDependentResources()
         return hr;
 
     hr = CreateSphere();
+    if (FAILED(hr))
+        return hr;
+
+    hr = CreateTexture();
     if (FAILED(hr))
         return hr;
 
@@ -279,15 +328,9 @@ void Renderer::Clear()
     context->ClearDepthStencilView(m_pDeviceResources->GetDepthStencil(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 }
 
-void Renderer::RenderInTexture(ID3D11RenderTargetView* renderTarget)
+void Renderer::RenderInTexture()
 {
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
-    ID3D11DepthStencilView* depthStencil = m_pDeviceResources->GetDepthStencil();
-
-    D3D11_VIEWPORT viewport = m_pRenderTexture->GetViewPort();
-
-    context->OMSetRenderTargets(1, &renderTarget, depthStencil);
-    context->RSSetViewports(1, &viewport);
 
     // Set vertex buffer
     UINT stride = sizeof(VertexData);
@@ -310,6 +353,8 @@ void Renderer::RenderInTexture(ID3D11RenderTargetView* renderTarget)
     context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
     context->PSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
     context->PSSetConstantBuffers(1, 1, m_pLightPositionBuffer.GetAddressOf());
+    context->PSSetConstantBuffers(2, 1, m_pLightColorBuffer.GetAddressOf());
+    context->PSSetConstantBuffers(3, 1, m_pMaterialBuffer.GetAddressOf());
 
     switch (m_pSettings->GetShaderMode())
     {
@@ -329,8 +374,6 @@ void Renderer::RenderInTexture(ID3D11RenderTargetView* renderTarget)
         context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
         break;
     }
-    
-    context->PSSetConstantBuffers(2, 1, m_pLightColorBuffer.GetAddressOf());
 
     const int sphereGridSize = 10;
     const float gridWidth = 5;
@@ -348,10 +391,40 @@ void Renderer::RenderInTexture(ID3D11RenderTargetView* renderTarget)
             m_materialBufferData.Roughness = i / (sphereGridSize - 1.0f);
             m_materialBufferData.Metalness = j / (sphereGridSize - 1.0f);
             context->UpdateSubresource(m_pMaterialBuffer.Get(), 0, nullptr, &m_materialBufferData, 0, 0);
-            context->PSSetConstantBuffers(3, 1, m_pMaterialBuffer.GetAddressOf());
             context->DrawIndexed(m_indexCount, 0, 0);
         }
     }
+}
+
+void Renderer::RenderEnvironment()
+{
+    ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
+
+    // Set vertex buffer
+    UINT stride = sizeof(VertexData);
+    UINT offset = 0;
+    context->IASetVertexBuffers(0, 1, m_pEnvironmentVertexBuffer.GetAddressOf(), &stride, &offset);
+
+    // Set index buffer
+    context->IASetIndexBuffer(m_pIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+
+    // Set primitive topology
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    context->IASetInputLayout(m_pInputLayout.Get());
+
+    m_constantBufferData.World = DirectX::XMMatrixMultiplyTranspose(
+        DirectX::XMMatrixScaling(1000, 1000, 1000),
+        DirectX::XMMatrixTranslationFromVector(m_pCamera->GetPosition())
+    );
+    context->UpdateSubresource(m_pConstantBuffer.Get(), 0, NULL, &m_constantBufferData, 0, 0);
+
+    // Render sphere
+    context->VSSetShader(m_pEnvironmentVertexShader.Get(), nullptr, 0);
+    context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
+    context->PSSetShader(m_pEnvironmentPixelShader.Get(), nullptr, 0);
+    context->PSSetShaderResources(0, 1, m_pEnvironmentShaderResourceView.GetAddressOf());
+    context->PSSetSamplers(0, 1, m_pSamplerLinear.GetAddressOf());
+    context->DrawIndexed(m_indexCount, 0, 0);
 }
 
 void Renderer::PostProcessTexture()
@@ -365,14 +438,27 @@ void Renderer::Render()
 {
     Clear();
 
+    ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
+    ID3D11RenderTargetView* renderTarget;
+
+    D3D11_VIEWPORT viewport = m_pRenderTexture->GetViewPort();
+    context->RSSetViewports(1, &viewport);
+
     if (m_pSettings->GetShaderMode() == Settings::PBRShaderMode::REGULAR)
     {
-        RenderInTexture(m_pRenderTexture->GetRenderTargetView());
+        renderTarget = m_pRenderTexture->GetRenderTargetView();
+        context->OMSetRenderTargets(1, &renderTarget, m_pDeviceResources->GetDepthStencil());
+        
+        RenderEnvironment();
+        RenderInTexture();
         PostProcessTexture();
     }
     else
     {
-        RenderInTexture(m_pDeviceResources->GetRenderTarget());
+        renderTarget = m_pDeviceResources->GetRenderTarget();
+        context->OMSetRenderTargets(1, &renderTarget, m_pDeviceResources->GetDepthStencil());
+        
+        RenderInTexture();
     }
 }
 

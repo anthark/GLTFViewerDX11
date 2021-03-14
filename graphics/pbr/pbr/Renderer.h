@@ -25,11 +25,13 @@ private:
     HRESULT CreateShaders();
     HRESULT CreateSphere();
     HRESULT CreateLights();
+    HRESULT CreateTexture();
 
     void UpdatePerspective();
 
     void Clear();
-    void RenderInTexture(ID3D11RenderTargetView* renderTarget);
+    void RenderInTexture();
+    void RenderEnvironment();
     void PostProcessTexture();
 
     std::unique_ptr<RenderTexture>        m_pRenderTexture;
@@ -40,12 +42,18 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D11InputLayout>        m_pInputLayout;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pVertexBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pEnvironmentVertexBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pIndexBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Resource>           m_pEnvironmentTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pEnvironmentShaderResourceView;
+    Microsoft::WRL::ComPtr<ID3D11SamplerState>       m_pSamplerLinear;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pVertexShader;
+    Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pEnvironmentVertexShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pNDPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pGPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pFPixelShader;
+    Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pEnvironmentPixelShader;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightPositionBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightColorBuffer;

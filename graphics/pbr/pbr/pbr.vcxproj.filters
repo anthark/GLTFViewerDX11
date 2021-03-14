@@ -25,6 +25,9 @@
     <Filter Include="PBRShaders">
       <UniqueIdentifier>{18ec88c5-da7b-4f4f-8270-bd9f08b53d24}</UniqueIdentifier>
     </Filter>
+    <Filter Include="EnvironmentShaders">
+      <UniqueIdentifier>{6a65c8ce-040f-409f-9fa5-ab3ddef5c863}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DeviceResources.cpp">
@@ -78,6 +81,9 @@
     <ClCompile Include="..\..\ImGui\imgui_widgets.cpp">
       <Filter>Исходные файлы\ImGui</Filter>
     </ClCompile>
+    <ClCompile Include="WICTextureLoader.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="PostProcessShaders.fx">
@@ -112,6 +118,15 @@
     </FxCompile>
     <FxCompile Include="FPixelShader.hlsl">
       <Filter>PBRShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="EnvironmentPixelShader.hlsl">
+      <Filter>EnvironmentShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="EnvironmentShaders.fx">
+      <Filter>EnvironmentShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="EnvironmentVertexShader.hlsl">
+      <Filter>EnvironmentShaders</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
@@ -172,9 +187,12 @@
     <ClInclude Include="..\..\ImGui\imstb_truetype.h">
       <Filter>Файлы заголовков\ImGui</Filter>
     </ClInclude>
+    <ClInclude Include="WICTextureLoader.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="stone.dds">
+    <Image Include="sphere.jpg">
       <Filter>Файлы ресурсов</Filter>
     </Image>
   </ItemGroup>
