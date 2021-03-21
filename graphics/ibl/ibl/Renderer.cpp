@@ -9,6 +9,9 @@
 #include "Utils.h"
 #include "WICTextureLoader.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "StbImage.h"
+
 const float sphereRadius = 0.5f;
 
 Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources, const std::shared_ptr<Camera>& camera, const std::shared_ptr<Settings>& settings) :
@@ -196,6 +199,25 @@ HRESULT Renderer::CreateTexture()
     return hr;
 }
 
+HRESULT Renderer::CreateCubemapTextureFromHdr() 
+{
+    HRESULT hr = S_OK;
+    int x, y, n;
+    const char* filename = "roof.hdr";
+
+    // Load hdr image
+    bool isHdr = stbi_is_hdr(filename);
+    if (isHdr || true) {
+        unsigned char* data = stbi_load(filename, &x, &y, &n, 0);
+
+        //TODO: Creating cubemap texture...
+
+        stbi_image_free(data);
+    }
+
+    return hr;
+}
+
 void Renderer::UpdatePerspective()
 {
     m_constantBufferData.Projection = DirectX::XMMatrixTranspose(
@@ -206,6 +228,10 @@ void Renderer::UpdatePerspective()
 HRESULT Renderer::CreateDeviceDependentResources()
 {
     HRESULT hr = S_OK;
+
+    hr = CreateCubemapTextureFromHdr();
+    if (FAILED(hr))
+        return hr;
 
     hr = CreateShaders();
     if (FAILED(hr))

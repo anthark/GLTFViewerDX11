@@ -26,6 +26,7 @@ private:
     HRESULT CreateSphere();
     HRESULT CreateLights();
     HRESULT CreateTexture();
+    HRESULT CreateCubemapTextureFromHdr();
 
     void UpdatePerspective();
 

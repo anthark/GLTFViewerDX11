@@ -312,6 +312,7 @@
     <ClInclude Include="RenderTexture.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="ShaderStructures.h" />
+    <ClInclude Include="StbImage.h" />
     <ClInclude Include="ToneMapPostProcess.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="WICTextureLoader.h" />
@@ -324,6 +325,9 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="sphere.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="room.hdr" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
