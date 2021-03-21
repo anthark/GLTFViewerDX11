@@ -27,6 +27,7 @@ private:
     HRESULT CreateLights();
     HRESULT CreateTexture();
     HRESULT CreateCubeTexture();
+    HRESULT CreateIrradianceTexture();
 
     void UpdatePerspective();
 
@@ -49,14 +50,18 @@ private:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pEnvironmentShaderResourceView;
     Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pEnvironmentCubeTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pEnvironmentCubeShaderResourceView;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pIrradianceTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pIrradianceShaderResourceView;
     Microsoft::WRL::ComPtr<ID3D11SamplerState>       m_pSamplerLinear;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pVertexShader;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pEnvironmentVertexShader;
+    Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pIrradianceVertexShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pNDPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pGPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pFPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pEnvironmentPixelShader;
+    Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pIrradiancePixelShader;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightPositionBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightColorBuffer;
@@ -69,4 +74,22 @@ private:
     
     UINT32 m_indexCount;
     UINT32 m_frameCount;
+
+    DirectX::XMVECTOR m_targers[6] = {
+        DirectX::XMVectorSet(1, 0, 0, 0),
+        DirectX::XMVectorSet(-1, 0, 0, 0),
+        DirectX::XMVectorSet(0, 1, 0, 0),
+        DirectX::XMVectorSet(0, -1, 0, 0),
+        DirectX::XMVectorSet(0, 0, 1, 0),
+        DirectX::XMVectorSet(0, 0, -1, 0)
+    };
+
+    DirectX::XMVECTOR m_ups[6] = {
+        DirectX::XMVectorSet(0, 1, 0, 0),
+        DirectX::XMVectorSet(0, 1, 0, 0),
+        DirectX::XMVectorSet(0, 0, -1, 0),
+        DirectX::XMVectorSet(0, 0, 1, 0),
+        DirectX::XMVectorSet(0, 1, 0, 0),
+        DirectX::XMVectorSet(0, 1, 0, 0)
+    };
 };

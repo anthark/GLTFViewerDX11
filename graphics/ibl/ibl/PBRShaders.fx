@@ -1,5 +1,9 @@
 #define NUM_LIGHTS 3
 
+TextureCube cubeTexture : register(t0);
+
+SamplerState samState : register(s0);
+
 static const float PI = 3.14159265358979323846f;
 
 cbuffer Transformation: register(b0)
@@ -130,5 +134,5 @@ float4 ps_main(PS_INPUT input) : SV_TARGET
 	color2 = LO_i(input.WorldPos.xyz, n, v, LightPositions[1] - input.WorldPos.xyz, LightColors[1]);
 	color3 = LO_i(input.WorldPos.xyz, n, v, LightPositions[2] - input.WorldPos.xyz, LightColors[2]);
 
-	return float4(color1 + color2 + color3 + Albedo * 0.3, 1.0f);
+    return float4(color1 + color2 + color3 + Albedo * 0.3, 1.0f);
 }

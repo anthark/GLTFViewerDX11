@@ -9,7 +9,7 @@ App::App() :
 
 HRESULT App::CreateDesktopWindow(HINSTANCE hInstance, int nCmdShow, WNDPROC pWndProc)
 {
-    const wchar_t CLASS_NAME[] = L"Lab3Class";
+    const wchar_t CLASS_NAME[] = L"Lab4Class";
     WNDCLASSEX wcex = {};
 
     wcex.cbSize = sizeof(WNDCLASSEX);
@@ -28,7 +28,7 @@ HRESULT App::CreateDesktopWindow(HINSTANCE hInstance, int nCmdShow, WNDPROC pWnd
     // Create window
     RECT rc = { 0, 0, 1000, 800 };
     AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
-    m_hWnd = CreateWindow(CLASS_NAME, L"Lab3", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
+    m_hWnd = CreateWindow(CLASS_NAME, L"Lab4", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
         rc.right - rc.left, rc.bottom - rc.top, nullptr, nullptr, hInstance, nullptr);
     if (!m_hWnd)
         return HRESULT_FROM_WIN32(GetLastError());

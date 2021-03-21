@@ -81,6 +81,16 @@ HRESULT Renderer::CreateShaders()
     if (FAILED(hr))
         return hr;
 
+    // Create the vertex shader for irradiance
+    hr = CreateVertexShader(device, L"IrradianceVertexShader.cso", bytes, &m_pIrradianceVertexShader);
+    if (FAILED(hr))
+        return hr;
+
+    // Create the pixel shader for irradiance
+    hr = CreatePixelShader(device, L"IrradiancePixelShader.cso", bytes, &m_pIrradiancePixelShader);
+    if (FAILED(hr))
+        return hr;
+
     // Create the constant buffer for world-view-projection matrices
     CD3D11_BUFFER_DESC cbd(
         sizeof(WorldViewProjectionConstantBuffer),
@@ -208,7 +218,7 @@ HRESULT Renderer::CreateCubeTexture()
     td.Height = cubeSize;
     td.MipLevels = 1;
     td.ArraySize = 6;
-    td.Format = DXGI_FORMAT_BC1_UNORM_SRGB;
+    td.Format = DXGI_FORMAT_BC1_UNORM;
     td.SampleDesc.Count = 1;
     td.SampleDesc.Quality = 0;
     td.Usage = D3D11_USAGE_DEFAULT;
@@ -225,7 +235,7 @@ HRESULT Renderer::CreateCubeTexture()
     D3D11_BOX box = CD3D11_BOX(0, 0, 0, cubeSize, cubeSize, 1);
     for (UINT i = 0; i < 6; ++i)
     {
-        hr = DirectX::CreateDDSTextureFromFileEx(m_pDeviceResources->GetDevice(), nullptr, files[i], 0, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, true, &texture, nullptr);
+        hr = DirectX::CreateDDSTextureFromFileEx(m_pDeviceResources->GetDevice(), nullptr, files[i], 0, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, false, &texture, nullptr);
         if (FAILED(hr))
             return hr;
         m_pDeviceResources->GetDeviceContext()->CopySubresourceRegion(m_pEnvironmentCubeTexture.Get(), D3D11CalcSubresource(0, i, 1), 0, 0, 0, texture.Get(), 0, &box);
@@ -239,6 +249,112 @@ HRESULT Renderer::CreateCubeTexture()
     srvd.Texture2D.MostDetailedMip = 0;
     srvd.Texture2D.MipLevels = 1;
     hr = m_pDeviceResources->GetDevice()->CreateShaderResourceView(m_pEnvironmentCubeTexture.Get(), &srvd, &m_pEnvironmentCubeShaderResourceView);
+
+    return hr;
+}
+
+HRESULT Renderer::CreateIrradianceTexture()
+{
+    HRESULT hr = S_OK;
+
+    D3D11_TEXTURE2D_DESC td;
+    ZeroMemory(&td, sizeof(td));
+    td.Width = 32;
+    td.Height = 32;
+    td.MipLevels = 1;
+    td.ArraySize = 6;
+    td.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+    td.SampleDesc.Count = 1;
+    td.SampleDesc.Quality = 0;
+    td.Usage = D3D11_USAGE_DEFAULT;
+    td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    td.CPUAccessFlags = 0;
+    td.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+
+    hr = m_pDeviceResources->GetDevice()->CreateTexture2D(&td, nullptr, &m_pIrradianceTexture);
+    if (FAILED(hr))
+        return hr;
+    
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+    td.ArraySize = 1;
+    td.BindFlags = D3D11_BIND_RENDER_TARGET;
+    td.MiscFlags = 0;
+
+    hr = m_pDeviceResources->GetDevice()->CreateTexture2D(&td, nullptr, &texture);
+    if (FAILED(hr))
+        return hr;
+
+    m_pIrradianceTexture->GetDesc(&td);
+    texture->GetDesc(&td);
+
+    // Create render target view
+    CD3D11_RENDER_TARGET_VIEW_DESC rtvd(D3D11_RTV_DIMENSION_TEXTURE2D, td.Format);
+    Microsoft::WRL::ComPtr<ID3D11RenderTargetView> pRenderTarget;
+    hr = m_pDeviceResources->GetDevice()->CreateRenderTargetView(texture.Get(), &rtvd, pRenderTarget.ReleaseAndGetAddressOf());
+    if (FAILED(hr))
+        return hr;
+
+    D3D11_VIEWPORT viewport;
+    viewport.Width = static_cast<FLOAT>(32);
+    viewport.Height = static_cast<FLOAT>(32);
+    viewport.MinDepth = 0.0f;
+    viewport.MaxDepth = 1.0f;
+    viewport.TopLeftX = 0;
+    viewport.TopLeftY = 0;
+    
+    WorldViewProjectionConstantBuffer cb;
+    cb.World = DirectX::XMMatrixIdentity();
+    cb.Projection = DirectX::XMMatrixTranspose(
+        DirectX::XMMatrixPerspectiveFovRH(DirectX::XM_PIDIV2, m_pDeviceResources->GetAspectRatio(), 0.2f, 0.8f)
+    );
+
+    m_pDeviceResources->GetAnnotation()->BeginEvent(L"Start irradiance creating");
+
+    ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
+    ID3D11RenderTargetView* renderTarget = pRenderTarget.Get();
+    context->RSSetViewports(1, &viewport);
+    context->OMSetRenderTargets(1, &renderTarget, nullptr);
+
+    // Set vertex buffer
+    UINT stride = sizeof(VertexData);
+    UINT offset = 0;
+    context->IASetVertexBuffers(0, 1, m_pEnvironmentVertexBuffer.GetAddressOf(), &stride, &offset);
+
+    // Set index buffer
+    context->IASetIndexBuffer(m_pIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+
+    // Set primitive topology
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    context->IASetInputLayout(m_pInputLayout.Get());
+
+    // Render irradiance 
+    context->VSSetShader(m_pIrradianceVertexShader.Get(), nullptr, 0);
+    context->PSSetShader(m_pIrradiancePixelShader.Get(), nullptr, 0);
+    context->PSSetShaderResources(0, 1, m_pEnvironmentCubeShaderResourceView.GetAddressOf());
+    context->PSSetSamplers(0, 1, m_pSamplerLinear.GetAddressOf());
+    context->PSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
+
+    D3D11_BOX box = CD3D11_BOX(0, 0, 0, 32, 32, 1);
+    for (UINT i = 0; i < 6; ++i)
+    {
+        cb.View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookAtRH(DirectX::XMVectorSet(0, 0, 0, 0), m_targers[i], m_ups[i]));
+        context->UpdateSubresource(m_pConstantBuffer.Get(), 0, nullptr, &m_constantBufferData, 0, 0);
+        context->DrawIndexed(m_indexCount, 0, 0);
+        m_pDeviceResources->GetDeviceContext()->CopySubresourceRegion(m_pEnvironmentCubeTexture.Get(), D3D11CalcSubresource(0, i, 1), 0, 0, 0, texture.Get(), 0, &box);
+    }
+
+    ID3D11ShaderResourceView* nullsrv[] = { nullptr };
+    context->PSSetShaderResources(0, 1, nullsrv);
+
+    m_pDeviceResources->GetAnnotation()->EndEvent();
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
+    ZeroMemory(&srvd, sizeof(srvd));
+    srvd.Format = td.Format;
+    srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+    srvd.Texture2D.MostDetailedMip = 0;
+    srvd.Texture2D.MipLevels = 1;
+    hr = m_pDeviceResources->GetDevice()->CreateShaderResourceView(m_pIrradianceTexture.Get(), &srvd, &m_pIrradianceShaderResourceView);
 
     return hr;
 }
@@ -271,6 +387,10 @@ HRESULT Renderer::CreateDeviceDependentResources()
         return hr;
 
     hr = CreateLights();
+    if (FAILED(hr))
+        return hr;
+
+    hr = CreateIrradianceTexture();
     if (FAILED(hr))
         return hr;
 
@@ -406,6 +526,8 @@ void Renderer::RenderInTexture()
     context->PSSetConstantBuffers(1, 1, m_pLightPositionBuffer.GetAddressOf());
     context->PSSetConstantBuffers(2, 1, m_pLightColorBuffer.GetAddressOf());
     context->PSSetConstantBuffers(3, 1, m_pMaterialBuffer.GetAddressOf());
+    context->PSSetShaderResources(0, 1, m_pIrradianceShaderResourceView.GetAddressOf());
+    context->PSSetSamplers(0, 1, m_pSamplerLinear.GetAddressOf());
 
     switch (m_pSettings->GetShaderMode())
     {
@@ -487,6 +609,9 @@ void Renderer::PostProcessTexture()
 
 void Renderer::Render()
 {
+    m_pIrradianceTexture.Reset();
+    m_pIrradianceShaderResourceView.Reset();
+    CreateIrradianceTexture();
     Clear();
 
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
