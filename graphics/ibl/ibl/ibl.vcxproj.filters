@@ -84,6 +84,9 @@
     <ClCompile Include="WICTextureLoader.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+    <ClCompile Include="DDSTextureLoader11.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="PostProcessShaders.fx">
@@ -190,9 +193,15 @@
     <ClInclude Include="WICTextureLoader.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="DDSTextureLoader11.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="sphere.jpg">
+      <Filter>Файлы ресурсов</Filter>
+    </Image>
+    <Image Include="skybox.dds">
       <Filter>Файлы ресурсов</Filter>
     </Image>
   </ItemGroup>

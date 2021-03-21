@@ -137,6 +137,7 @@
     <ClCompile Include="..\..\ImGui\imgui_widgets.cpp" />
     <ClCompile Include="AverageLuminanceProcess.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="DDSTextureLoader11.cpp" />
     <ClCompile Include="DeviceResources.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="App.cpp" />
@@ -165,9 +166,13 @@
     </FxCompile>
     <FxCompile Include="EnvironmentPixelShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ps_main</EntryPointName>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ps_main</EntryPointName>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ps_main</EntryPointName>
@@ -181,9 +186,13 @@
     </FxCompile>
     <FxCompile Include="EnvironmentVertexShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">vs_main</EntryPointName>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">vs_main</EntryPointName>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">vs_main</EntryPointName>
@@ -305,6 +314,7 @@
     <ClInclude Include="..\..\ImGui\imstb_truetype.h" />
     <ClInclude Include="AverageLuminanceProcess.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="DDSTextureLoader11.h" />
     <ClInclude Include="DeviceResources.h" />
     <ClInclude Include="App.h" />
     <ClInclude Include="pch.h" />
@@ -324,6 +334,39 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="sphere.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <ContentWithTargetPath Include="skybox.dds">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>$(OutputDir)\skybox.dds</TargetPath>
+    </ContentWithTargetPath>
+	<ContentWithTargetPath Include="skybox_right.dds">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>$(OutputDir)\skybox_right.dds</TargetPath>
+    </ContentWithTargetPath>
+	<ContentWithTargetPath Include="skybox_left.dds">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>$(OutputDir)\skybox_left.dds</TargetPath>
+    </ContentWithTargetPath>
+	<ContentWithTargetPath Include="skybox_top.dds">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>$(OutputDir)\skybox_top.dds</TargetPath>
+    </ContentWithTargetPath>
+	<ContentWithTargetPath Include="skybox_bottom.dds">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>$(OutputDir)\skybox_bottom.dds</TargetPath>
+    </ContentWithTargetPath>
+	<ContentWithTargetPath Include="skybox_front.dds">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>$(OutputDir)\skybox_front.dds</TargetPath>
+    </ContentWithTargetPath>
+	<ContentWithTargetPath Include="skybox_back.dds">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>$(OutputDir)\skybox_back.dds</TargetPath>
+    </ContentWithTargetPath>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="skybox.dds" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

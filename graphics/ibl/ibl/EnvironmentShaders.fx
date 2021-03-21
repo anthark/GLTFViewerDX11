@@ -1,4 +1,4 @@
-Texture2D<float4> sourceTexture : register(t0);
+TextureCube cubeTexture : register(t0);
 
 SamplerState samState : register(s0);
 
@@ -20,7 +20,7 @@ struct VS_INPUT
 struct PS_INPUT
 {
     float4 Pos : SV_POSITION;
-    float2 Tex : TEXCOORD0;
+    float3 Tex : TEXCOORD;
 };
 
 PS_INPUT vs_main(VS_INPUT input)
@@ -29,11 +29,11 @@ PS_INPUT vs_main(VS_INPUT input)
     output.Pos = mul(input.Pos, World);
     output.Pos = mul(output.Pos, View);
     output.Pos = mul(output.Pos, Projection);
-    output.Tex = input.Tex;
+    output.Tex = input.Pos.xyz;
     return output;
 }
 
 float4 ps_main(PS_INPUT input) : SV_TARGET
 {
-    return sourceTexture.Sample(samState, input.Tex) * 16;
+    return cubeTexture.Sample(samState, input.Tex) * 16;
 }

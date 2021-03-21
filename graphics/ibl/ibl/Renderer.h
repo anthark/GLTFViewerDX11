@@ -26,6 +26,7 @@ private:
     HRESULT CreateSphere();
     HRESULT CreateLights();
     HRESULT CreateTexture();
+    HRESULT CreateCubeTexture();
 
     void UpdatePerspective();
 
@@ -46,6 +47,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pIndexBuffer;
     Microsoft::WRL::ComPtr<ID3D11Resource>           m_pEnvironmentTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pEnvironmentShaderResourceView;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pEnvironmentCubeTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pEnvironmentCubeShaderResourceView;
     Microsoft::WRL::ComPtr<ID3D11SamplerState>       m_pSamplerLinear;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pVertexShader;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pEnvironmentVertexShader;

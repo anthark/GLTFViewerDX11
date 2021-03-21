@@ -8,8 +8,10 @@
 #include "Renderer.h"
 #include "Utils.h"
 #include "WICTextureLoader.h"
+#include "DDSTextureLoader11.h"
 
 const float sphereRadius = 0.5f;
+const UINT cubeSize = 256;
 
 Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources, const std::shared_ptr<Camera>& camera, const std::shared_ptr<Settings>& settings) :
     m_pDeviceResources(deviceResources),
@@ -196,6 +198,51 @@ HRESULT Renderer::CreateTexture()
     return hr;
 }
 
+HRESULT Renderer::CreateCubeTexture()
+{
+    HRESULT hr = S_OK;
+
+    D3D11_TEXTURE2D_DESC td;
+    ZeroMemory(&td, sizeof(td));
+    td.Width = cubeSize;
+    td.Height = cubeSize;
+    td.MipLevels = 1;
+    td.ArraySize = 6;
+    td.Format = DXGI_FORMAT_BC1_UNORM_SRGB;
+    td.SampleDesc.Count = 1;
+    td.SampleDesc.Quality = 0;
+    td.Usage = D3D11_USAGE_DEFAULT;
+    td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    td.CPUAccessFlags = 0;
+    td.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+
+    hr = m_pDeviceResources->GetDevice()->CreateTexture2D(&td, nullptr, &m_pEnvironmentCubeTexture);
+    if (FAILED(hr))
+        return hr;
+
+    Microsoft::WRL::ComPtr<ID3D11Resource> texture;
+    const WCHAR* files[] = { L"skybox_right.dds", L"skybox_left.dds", L"skybox_top.dds", L"skybox_bottom.dds", L"skybox_front.dds", L"skybox_back.dds" };
+    D3D11_BOX box = CD3D11_BOX(0, 0, 0, cubeSize, cubeSize, 1);
+    for (UINT i = 0; i < 6; ++i)
+    {
+        hr = DirectX::CreateDDSTextureFromFileEx(m_pDeviceResources->GetDevice(), nullptr, files[i], 0, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, true, &texture, nullptr);
+        if (FAILED(hr))
+            return hr;
+        m_pDeviceResources->GetDeviceContext()->CopySubresourceRegion(m_pEnvironmentCubeTexture.Get(), D3D11CalcSubresource(0, i, 1), 0, 0, 0, texture.Get(), 0, &box);
+        texture.Reset();
+    }
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
+    ZeroMemory(&srvd, sizeof(srvd));
+    srvd.Format = td.Format;
+    srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+    srvd.Texture2D.MostDetailedMip = 0;
+    srvd.Texture2D.MipLevels = 1;
+    hr = m_pDeviceResources->GetDevice()->CreateShaderResourceView(m_pEnvironmentCubeTexture.Get(), &srvd, &m_pEnvironmentCubeShaderResourceView);
+
+    return hr;
+}
+
 void Renderer::UpdatePerspective()
 {
     m_constantBufferData.Projection = DirectX::XMMatrixTranspose(
@@ -216,6 +263,10 @@ HRESULT Renderer::CreateDeviceDependentResources()
         return hr;
 
     hr = CreateTexture();
+    if (FAILED(hr))
+        return hr;
+
+    hr = CreateCubeTexture();
     if (FAILED(hr))
         return hr;
 
@@ -422,7 +473,7 @@ void Renderer::RenderEnvironment()
     context->VSSetShader(m_pEnvironmentVertexShader.Get(), nullptr, 0);
     context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
     context->PSSetShader(m_pEnvironmentPixelShader.Get(), nullptr, 0);
-    context->PSSetShaderResources(0, 1, m_pEnvironmentShaderResourceView.GetAddressOf());
+    context->PSSetShaderResources(0, 1, m_pEnvironmentCubeShaderResourceView.GetAddressOf());
     context->PSSetSamplers(0, 1, m_pSamplerLinear.GetAddressOf());
     context->DrawIndexed(m_indexCount, 0, 0);
 }
