@@ -43,6 +43,7 @@ private:
     std::shared_ptr<Settings>             m_pSettings;
 
     Microsoft::WRL::ComPtr<ID3D11InputLayout>        m_pInputLayout;
+    Microsoft::WRL::ComPtr<ID3D11InputLayout>        m_pIrradianceInputLayout;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pVertexBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pEnvironmentVertexBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pIndexBuffer;
@@ -91,5 +92,23 @@ private:
         DirectX::XMVectorSet(0, 0, 1, 0),
         DirectX::XMVectorSet(0, 1, 0, 0),
         DirectX::XMVectorSet(0, 1, 0, 0)
+    };
+
+    DirectX::XMFLOAT3 m_squareLeftBottomAngles[6] = {
+        DirectX::XMFLOAT3(0.5f, -0.5f, 0.5f),
+        DirectX::XMFLOAT3(-0.5f, -0.5f, -0.5f),
+        DirectX::XMFLOAT3(-0.5f, 0.5f, 0.5f),
+        DirectX::XMFLOAT3(-0.5f, -0.5f, -0.5f),
+        DirectX::XMFLOAT3(-0.5f, -0.5f, 0.5f),
+        DirectX::XMFLOAT3(0.5f, -0.5f, -0.5f)
+    };
+
+    DirectX::XMFLOAT3 m_squareRightTopAngles[6] = {
+        DirectX::XMFLOAT3(0.5f, 0.5f, -0.5f),
+        DirectX::XMFLOAT3(-0.5f, 0.5f, 0.5f),
+        DirectX::XMFLOAT3(0.5f, 0.5f, -0.5f),
+        DirectX::XMFLOAT3(0.5f, -0.5f, 0.5f),
+        DirectX::XMFLOAT3(0.5f, 0.5f, 0.5f),
+        DirectX::XMFLOAT3(-0.5f, 0.5f, -0.5f)
     };
 };

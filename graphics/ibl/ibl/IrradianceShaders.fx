@@ -16,9 +16,7 @@ cbuffer Transformation : register(b0)
 
 struct VS_INPUT
 {
-    float4 Pos : POSITION;
-    float2 Tex : TEXCOORD0;
-    float3 Normal : NORMAL;
+    float3 Pos : POSITION;
 };
 
 struct PS_INPUT
@@ -52,14 +50,15 @@ float3 Irradiance(float3 normal)
 PS_INPUT vs_main(VS_INPUT input)
 {
     PS_INPUT output = (PS_INPUT) 0;
-    output.Pos = mul(input.Pos, World);
+    output.Pos = float4(input.Pos, 1.0f);
+    output.Pos = mul(output.Pos, World);
     output.Pos = mul(output.Pos, View);
     output.Pos = mul(output.Pos, Projection);
-    output.Tex = input.Pos.xyz;
+    output.Tex = input.Pos;
     return output;
 }
 
 float4 ps_main(PS_INPUT input) : SV_TARGET
 {
-    return float4(Irradiance(input.Tex), 1.0f);
+    return float4(Irradiance(normalize(input.Tex)), 1.0f);
 }

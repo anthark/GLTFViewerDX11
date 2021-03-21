@@ -17,6 +17,11 @@ struct VertexData
 	DirectX::XMFLOAT3 Normal;
 };
 
+struct VertexPosData
+{
+	DirectX::XMFLOAT3 Pos;
+};
+
 struct LightPositionConstantBuffer
 {
 	DirectX::XMFLOAT4 LightPosition[NUM_LIGHTS];
