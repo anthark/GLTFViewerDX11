@@ -94,7 +94,7 @@ float4 gps_main(PS_INPUT input) : SV_TARGET
 float3 fresnel(float3 n, float3 v, float3 l)
 {
 	float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), Albedo, Metalness);
-    return (F0 + (max(1 - Roughness, F0) - F0) * pow(1 - max(dot(h(v, l), v), 0), 5)) * sign(max(dot(l, n), 0));
+    return (F0 + (1 - F0) * pow(1 - max(dot(h(v, l), v), 0), 5)) * sign(max(dot(l, n), 0));
 }
 
 float4 fps_main(PS_INPUT input) : SV_TARGET
@@ -102,14 +102,21 @@ float4 fps_main(PS_INPUT input) : SV_TARGET
     return float4(fresnel(normalize(input.Normal), normalize(CameraPos.xyz - input.WorldPos.xyz), normalize(LightPositions[0] - input.WorldPos.xyz)), 1.0f);
 }
 
+float3 fresnelRoughness(float3 n, float3 v, float3 l, float roughness)
+{
+    float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), Albedo, Metalness);
+    return (F0 + (max(1 - roughness, F0) - F0) * pow(1 - max(dot(h(v, l), v), 0), 5)) * sign(max(dot(l, n), 0));
+}
+
 float3 BRDF(float3 p, float3 n, float3 v, float3 l)
 {
 	float D = normalDistribution(n, v, l);
 	float G = geometry(n, v, l);
 	float3 F = fresnel(n, v, l);
+    float3 FR = fresnelRoughness(n, v, l, Roughness);
     float3 irradiance = cubeTexture.Sample(samState, n).rgb;
 
-    return (1 - F) * Albedo * irradiance * (1 - Metalness) + D * F * G / (0.001f + 4 * (max(dot(l, n), 0) * max(dot(v, n), 0)));
+    return (1 - FR) * Albedo * irradiance * (1 - Metalness) + D * F * G / (0.001f + 4 * (max(dot(l, n), 0) * max(dot(v, n), 0)));
 }
 
 float Attenuation(float3 lightDir)

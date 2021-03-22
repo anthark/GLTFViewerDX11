@@ -11,7 +11,7 @@
 #include "DDSTextureLoader11.h"
 
 const float sphereRadius = 0.5f;
-const UINT cubeSize = 256;
+const UINT cubeSize = 512;
 
 Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources, const std::shared_ptr<Camera>& camera, const std::shared_ptr<Settings>& settings) :
     m_pDeviceResources(deviceResources),
@@ -345,7 +345,7 @@ HRESULT Renderer::CreateIrradianceTexture()
     
     WorldViewProjectionConstantBuffer cb;
     cb.World = DirectX::XMMatrixTranspose(DirectX::XMMatrixIdentity());
-    cb.Projection = DirectX::XMMatrixTranspose(DirectX::XMMatrixPerspectiveFovRH(DirectX::XM_PIDIV2, 1, 0.2f, 0.8f));
+    cb.Projection = DirectX::XMMatrixTranspose(DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1, 0.2f, 0.8f));
 
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
     ID3D11RenderTargetView* renderTarget = pRenderTarget.Get();
@@ -388,7 +388,7 @@ HRESULT Renderer::CreateIrradianceTexture()
             {
                 pos[widthCoord] = leftBottomAngel[widthCoord] + l * widthStep;
                 pos[heightCoord] = leftBottomAngel[heightCoord] + k * heightStep;
-                vertices[k * (mapSize + 1) + l].Pos = DirectX::XMFLOAT3(pos);
+                vertices[(mapSize - k) * (mapSize + 1) + l].Pos = DirectX::XMFLOAT3(pos);
             }
         }
 
@@ -399,7 +399,7 @@ HRESULT Renderer::CreateIrradianceTexture()
         
         context->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &stride, &offset);
 
-        cb.View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookAtRH(DirectX::XMVectorSet(0, 0, 0, 0), m_targers[i], m_ups[i]));
+        cb.View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookAtLH(DirectX::XMVectorSet(0, 0, 0, 0), m_targers[i], m_ups[i]));
         context->UpdateSubresource(m_pConstantBuffer.Get(), 0, nullptr, &cb, 0, 0);
         context->ClearRenderTargetView(renderTarget, color);
         context->DrawIndexed(indexCount, 0, 0);
