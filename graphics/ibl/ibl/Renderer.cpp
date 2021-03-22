@@ -10,6 +10,8 @@
 #include "WICTextureLoader.h"
 #include "DDSTextureLoader11.h"
 
+#include "renderdoc_app.h"
+
 const float sphereRadius = 0.5f;
 const UINT cubeSize = 512;
 
@@ -367,7 +369,7 @@ HRESULT Renderer::CreateIrradianceTexture()
     context->PSSetShader(m_pIrradiancePixelShader.Get(), nullptr, 0);
     context->PSSetShaderResources(0, 1, m_pEnvironmentCubeShaderResourceView.GetAddressOf());
     context->PSSetSamplers(0, 1, m_pSamplerLinear.GetAddressOf());
-    context->PSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
+    context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
 
     float color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
     D3D11_BOX box = CD3D11_BOX(0, 0, 0, mapSize, mapSize, 1);
@@ -427,6 +429,8 @@ void Renderer::UpdatePerspective()
     );
 }
 
+RENDERDOC_API_1_4_1* g_pRDApi = nullptr;
+
 HRESULT Renderer::CreateDeviceDependentResources()
 {
     HRESULT hr = S_OK;
@@ -450,11 +454,44 @@ HRESULT Renderer::CreateDeviceDependentResources()
     hr = CreateLights();
     if (FAILED(hr))
         return hr;
+    /*
+    HMODULE rdHandle = LoadLibrary(L"renderdoc.dll");
+    if (rdHandle != nullptr)
+    {
+       // For debugging of the next part of code
+       while (!::IsDebuggerPresent())
+       {
+          Sleep(1);
+       }
 
-    //hr = CreateIrradianceTexture();
-    //if (FAILED(hr))
-    //   return hr;
+       void* pProc = ::GetProcAddress(rdHandle, "RENDERDOC_GetAPI");
 
+       pRENDERDOC_GetAPI pRenderDocGetAPI = static_cast<pRENDERDOC_GetAPI>(pProc);
+       assert(pRenderDocGetAPI != nullptr);
+
+       int ret = pRenderDocGetAPI(eRENDERDOC_API_Version_1_4_1, (void**)&g_pRDApi);
+       assert(ret == 1);
+    }
+
+    if (g_pRDApi)
+    {
+       g_pRDApi->StartFrameCapture(nullptr, nullptr);
+    }
+    */
+    hr = CreateIrradianceTexture();
+    if (FAILED(hr))
+       return hr;
+    /*
+    if (g_pRDApi)
+    {
+       g_pRDApi->EndFrameCapture(nullptr, nullptr);
+    }
+
+    if (rdHandle)
+    {
+       ::FreeLibrary(rdHandle);
+    }
+    */
     m_pToneMap = std::unique_ptr<ToneMapPostProcess>(new ToneMapPostProcess());
     hr = m_pToneMap->CreateDeviceDependentResources(m_pDeviceResources->GetDevice());
     
@@ -674,7 +711,6 @@ void Renderer::PostProcessTexture()
 void Renderer::Render()
 {
     Clear();
-    CreateIrradianceTexture();
 
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
     ID3D11RenderTargetView* renderTarget;
