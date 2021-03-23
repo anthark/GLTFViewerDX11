@@ -105,6 +105,16 @@ HRESULT Renderer::CreateShaders()
     if (FAILED(hr))
         return hr;
 
+    // Create the vertex shader for environment cube
+    hr = CreateVertexShader(device, L"EnvironmentCubeVertexShader.cso", bytes, &m_pEnvironmentCubeVertexShader);
+    if (FAILED(hr))
+        return hr;
+
+    // Create the pixel shader for environment cube
+    hr = CreatePixelShader(device, L"EnvironmentCubePixelShader.cso", bytes, &m_pEnvironmentCubePixelShader);
+    if (FAILED(hr))
+        return hr;
+
     // Create the constant buffer for world-view-projection matrices
     CD3D11_BUFFER_DESC cbd(
         sizeof(WorldViewProjectionConstantBuffer),
@@ -203,7 +213,7 @@ HRESULT Renderer::CreateTexture()
 {
     HRESULT hr = S_OK;
 
-    hr = CreateWICTextureFromFile(m_pDeviceResources->GetDevice(), m_pDeviceResources->GetDeviceContext(), L"sphere.jpg",
+    hr = CreateWICTextureFromFile(m_pDeviceResources->GetDevice(), m_pDeviceResources->GetDeviceContext(), L"env.png",
         &m_pEnvironmentTexture, &m_pEnvironmentShaderResourceView);
     if (FAILED(hr))
         return hr;
@@ -226,13 +236,45 @@ HRESULT Renderer::CreateCubeTexture()
 {
     HRESULT hr = S_OK;
 
+    UINT mapSize = 128;
+
+    Microsoft::WRL::ComPtr<ID3D11Buffer> vertexBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> indexBuffer;
+
+    std::vector<VertexPosData> vertices((mapSize + 1) * (mapSize + 1));
+
+    std::vector<WORD> indices;
+    for (UINT i = 0; i < mapSize; ++i)
+    {
+        for (UINT j = 0; j < mapSize; ++j)
+        {
+            indices.push_back(i * (mapSize + 1) + j);
+            indices.push_back(i * (mapSize + 1) + j + 1);
+            indices.push_back((i + 1) * (mapSize + 1) + j);
+
+            indices.push_back(i * (mapSize + 1) + j + 1);
+            indices.push_back((i + 1) * (mapSize + 1) + j + 1);
+            indices.push_back((i + 1) * (mapSize + 1) + j);
+        }
+    }
+    UINT indexCount = mapSize * mapSize * 6;
+
+    D3D11_SUBRESOURCE_DATA initData;
+    ZeroMemory(&initData, sizeof(D3D11_SUBRESOURCE_DATA));
+    CD3D11_BUFFER_DESC vbd(sizeof(VertexPosData) * static_cast<UINT>(vertices.size()), D3D11_BIND_VERTEX_BUFFER);
+    CD3D11_BUFFER_DESC ibd(sizeof(WORD) * indexCount, D3D11_BIND_INDEX_BUFFER);
+    initData.pSysMem = indices.data();
+    hr = m_pDeviceResources->GetDevice()->CreateBuffer(&ibd, &initData, &indexBuffer);
+    if (FAILED(hr))
+        return hr;
+
     D3D11_TEXTURE2D_DESC td;
     ZeroMemory(&td, sizeof(td));
-    td.Width = cubeSize;
-    td.Height = cubeSize;
+    td.Width = mapSize;
+    td.Height = mapSize;
     td.MipLevels = 1;
     td.ArraySize = 6;
-    td.Format = DXGI_FORMAT_BC1_UNORM;
+    td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     td.SampleDesc.Count = 1;
     td.SampleDesc.Quality = 0;
     td.Usage = D3D11_USAGE_DEFAULT;
@@ -244,17 +286,94 @@ HRESULT Renderer::CreateCubeTexture()
     if (FAILED(hr))
         return hr;
 
-    Microsoft::WRL::ComPtr<ID3D11Resource> texture;
-    const WCHAR* files[] = { L"skybox_right.dds", L"skybox_left.dds", L"skybox_top.dds", L"skybox_bottom.dds", L"skybox_front.dds", L"skybox_back.dds" };
-    D3D11_BOX box = CD3D11_BOX(0, 0, 0, cubeSize, cubeSize, 1);
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+    td.ArraySize = 1;
+    td.BindFlags = D3D11_BIND_RENDER_TARGET;
+    td.MiscFlags = 0;
+
+    hr = m_pDeviceResources->GetDevice()->CreateTexture2D(&td, nullptr, &texture);
+    if (FAILED(hr))
+        return hr;
+
+    // Create render target view
+    CD3D11_RENDER_TARGET_VIEW_DESC rtvd(D3D11_RTV_DIMENSION_TEXTURE2D, td.Format);
+    Microsoft::WRL::ComPtr<ID3D11RenderTargetView> pRenderTarget;
+    hr = m_pDeviceResources->GetDevice()->CreateRenderTargetView(texture.Get(), &rtvd, pRenderTarget.ReleaseAndGetAddressOf());
+    if (FAILED(hr))
+        return hr;
+
+    D3D11_VIEWPORT viewport;
+    viewport.Width = static_cast<FLOAT>(mapSize);
+    viewport.Height = static_cast<FLOAT>(mapSize);
+    viewport.MinDepth = 0.0f;
+    viewport.MaxDepth = 1.0f;
+    viewport.TopLeftX = 0;
+    viewport.TopLeftY = 0;
+
+    WorldViewProjectionConstantBuffer cb;
+    cb.World = DirectX::XMMatrixTranspose(DirectX::XMMatrixIdentity());
+    cb.Projection = DirectX::XMMatrixTranspose(DirectX::XMMatrixPerspectiveFovRH(DirectX::XM_PIDIV2, 1, 0.2f, 0.8f));
+
+    ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
+    ID3D11RenderTargetView* renderTarget = pRenderTarget.Get();
+    context->RSSetViewports(1, &viewport);
+    context->OMSetRenderTargets(1, &renderTarget, nullptr);
+
+    UINT stride = sizeof(VertexPosData);
+    UINT offset = 0;
+
+    // Set index buffer
+    context->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+
+    // Set primitive topology
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    context->IASetInputLayout(m_pIrradianceInputLayout.Get());
+
+    // Render irradiance 
+    context->VSSetShader(m_pEnvironmentCubeVertexShader.Get(), nullptr, 0);
+    context->PSSetShader(m_pEnvironmentCubePixelShader.Get(), nullptr, 0);
+    context->PSSetShaderResources(0, 1, m_pEnvironmentShaderResourceView.GetAddressOf());
+    context->PSSetSamplers(0, 1, m_pSamplerLinear.GetAddressOf());
+    context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
+
+    float color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    D3D11_BOX box = CD3D11_BOX(0, 0, 0, mapSize, mapSize, 1);
     for (UINT i = 0; i < 6; ++i)
     {
-        hr = DirectX::CreateDDSTextureFromFileEx(m_pDeviceResources->GetDevice(), nullptr, files[i], 0, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, false, &texture, nullptr);
+        UINT constCoord = i / 2;
+        UINT widthCoord = i >= 2 ? 0 : 2;
+        UINT heightCoord = (i == 2 || i == 3) ? 2 : 1;
+        FLOAT leftBottomAngel[3] = { m_squareLeftBottomAngles[i].x, m_squareLeftBottomAngles[i].y, m_squareLeftBottomAngles[i].z };
+        FLOAT rightTopAngel[3] = { m_squareRightTopAngles[i].x, m_squareRightTopAngles[i].y, m_squareRightTopAngles[i].z };
+        FLOAT widthStep = (rightTopAngel[widthCoord] - leftBottomAngel[widthCoord]) / mapSize;
+        FLOAT heightStep = (rightTopAngel[heightCoord] - leftBottomAngel[heightCoord]) / mapSize;
+        FLOAT pos[3];
+        pos[constCoord] = leftBottomAngel[constCoord];
+        for (UINT k = 0; k <= mapSize; ++k)
+        {
+            for (UINT l = 0; l <= mapSize; ++l)
+            {
+                pos[widthCoord] = leftBottomAngel[widthCoord] + l * widthStep;
+                pos[heightCoord] = leftBottomAngel[heightCoord] + k * heightStep;
+                vertices[k * (mapSize + 1) + l].Pos = DirectX::XMFLOAT3(pos);
+            }
+        }
+
+        initData.pSysMem = vertices.data();
+        hr = m_pDeviceResources->GetDevice()->CreateBuffer(&vbd, &initData, vertexBuffer.ReleaseAndGetAddressOf());
         if (FAILED(hr))
             return hr;
+
+        context->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &stride, &offset);
+        cb.View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookAtRH(DirectX::XMVectorSet(0, 0, 0, 0), m_targers[i], DirectX::XMVectorNegate(m_ups[i])));
+        context->UpdateSubresource(m_pConstantBuffer.Get(), 0, nullptr, &cb, 0, 0);
+        context->ClearRenderTargetView(renderTarget, color);
+        context->DrawIndexed(indexCount, 0, 0);
         m_pDeviceResources->GetDeviceContext()->CopySubresourceRegion(m_pEnvironmentCubeTexture.Get(), D3D11CalcSubresource(0, i, 1), 0, 0, 0, texture.Get(), 0, &box);
-        texture.Reset();
     }
+
+    ID3D11ShaderResourceView* nullsrv[] = { nullptr };
+    context->PSSetShaderResources(0, 1, nullsrv);
 
     D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
     ZeroMemory(&srvd, sizeof(srvd));
@@ -429,7 +548,7 @@ void Renderer::UpdatePerspective()
     );
 }
 
-RENDERDOC_API_1_4_1* g_pRDApi = nullptr;
+// RENDERDOC_API_1_4_1* g_pRDApi = nullptr;
 
 HRESULT Renderer::CreateDeviceDependentResources()
 {

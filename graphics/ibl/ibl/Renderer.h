@@ -57,12 +57,14 @@ private:
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pVertexShader;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pEnvironmentVertexShader;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pIrradianceVertexShader;
+    Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pEnvironmentCubeVertexShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pNDPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pGPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pFPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pEnvironmentPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pIrradiancePixelShader;
+    Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pEnvironmentCubePixelShader;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightPositionBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightColorBuffer;
