@@ -225,9 +225,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="skybox.dds">
-      <Filter>Файлы ресурсов</Filter>
-    </Image>
     <Image Include="env.png">
       <Filter>Файлы ресурсов</Filter>
     </Image>

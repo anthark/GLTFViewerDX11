@@ -38,7 +38,7 @@ float4 ps_main(PS_INPUT input) : SV_TARGET
 {
     float3 pos = normalize(input.Tex);
 
-    float u = 1.0f - atan2(-pos.z, pos.x) / (2 * PI);
+    float u = 1.0f - atan2(pos.z, pos.x) / (2 * PI);
     float v = 0.5f - asin(pos.y) / PI;
 
     return float4(envTexture.Sample(samState, float2(u, v)).xyz, 1.0f);
