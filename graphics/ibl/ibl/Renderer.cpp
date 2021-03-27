@@ -14,6 +14,7 @@
 
 const float sphereRadius = 0.5f;
 const UINT cubeSize = 512;
+const UINT mapSize = 32;
 
 Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources, const std::shared_ptr<Camera>& camera, const std::shared_ptr<Settings>& settings) :
     m_pDeviceResources(deviceResources),
@@ -232,238 +233,54 @@ HRESULT Renderer::CreateTexture()
     return hr;
 }
 
-HRESULT Renderer::CreateCubeTexture()
+HRESULT Renderer::CreateCubeTextureFromResource(UINT size, ID3D11Texture2D* dst, ID3D11ShaderResourceView* src, ID3D11VertexShader* vs, ID3D11PixelShader* ps)
 {
     HRESULT hr = S_OK;
-
-    UINT mapSize = 128;
 
     Microsoft::WRL::ComPtr<ID3D11Buffer> vertexBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> indexBuffer;
 
-    std::vector<VertexPosData> vertices((mapSize + 1) * (mapSize + 1));
+    VertexPosData vertices[4];
+    WORD indices[6] = {
+        0, 1, 2,
+        2, 3, 0
+    };
+    UINT indexCount = 6;
 
-    std::vector<WORD> indices;
-    for (UINT i = 0; i < mapSize; ++i)
-    {
-        for (UINT j = 0; j < mapSize; ++j)
-        {
-            indices.push_back(i * (mapSize + 1) + j);
-            indices.push_back(i * (mapSize + 1) + j + 1);
-            indices.push_back((i + 1) * (mapSize + 1) + j);
-
-            indices.push_back(i * (mapSize + 1) + j + 1);
-            indices.push_back((i + 1) * (mapSize + 1) + j + 1);
-            indices.push_back((i + 1) * (mapSize + 1) + j);
-        }
-    }
-    UINT indexCount = mapSize * mapSize * 6;
+    ID3D11Device* device = m_pDeviceResources->GetDevice();
 
     D3D11_SUBRESOURCE_DATA initData;
     ZeroMemory(&initData, sizeof(D3D11_SUBRESOURCE_DATA));
-    CD3D11_BUFFER_DESC vbd(sizeof(VertexPosData) * static_cast<UINT>(vertices.size()), D3D11_BIND_VERTEX_BUFFER);
+    CD3D11_BUFFER_DESC vbd(sizeof(VertexPosData) * 4, D3D11_BIND_VERTEX_BUFFER);
     CD3D11_BUFFER_DESC ibd(sizeof(WORD) * indexCount, D3D11_BIND_INDEX_BUFFER);
-    initData.pSysMem = indices.data();
-    hr = m_pDeviceResources->GetDevice()->CreateBuffer(&ibd, &initData, &indexBuffer);
+    initData.pSysMem = indices;
+    hr = device->CreateBuffer(&ibd, &initData, &indexBuffer);
     if (FAILED(hr))
         return hr;
-
-    D3D11_TEXTURE2D_DESC td;
-    ZeroMemory(&td, sizeof(td));
-    td.Width = mapSize;
-    td.Height = mapSize;
-    td.MipLevels = 1;
-    td.ArraySize = 6;
-    td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    td.SampleDesc.Count = 1;
-    td.SampleDesc.Quality = 0;
-    td.Usage = D3D11_USAGE_DEFAULT;
-    td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    td.CPUAccessFlags = 0;
-    td.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
-
-    hr = m_pDeviceResources->GetDevice()->CreateTexture2D(&td, nullptr, &m_pEnvironmentCubeTexture);
-    if (FAILED(hr))
-        return hr;
-
+ 
     Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
-    td.ArraySize = 1;
-    td.BindFlags = D3D11_BIND_RENDER_TARGET;
-    td.MiscFlags = 0;
-
-    hr = m_pDeviceResources->GetDevice()->CreateTexture2D(&td, nullptr, &texture);
+    D3D11_TEXTURE2D_DESC dtd;
+    dst->GetDesc(&dtd);
+    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(dtd.Format, size, size, 1, 1, D3D11_BIND_RENDER_TARGET);
+    hr = device->CreateTexture2D(&td, nullptr, &texture);
     if (FAILED(hr))
         return hr;
 
     // Create render target view
     CD3D11_RENDER_TARGET_VIEW_DESC rtvd(D3D11_RTV_DIMENSION_TEXTURE2D, td.Format);
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView> pRenderTarget;
-    hr = m_pDeviceResources->GetDevice()->CreateRenderTargetView(texture.Get(), &rtvd, pRenderTarget.ReleaseAndGetAddressOf());
+    hr = device->CreateRenderTargetView(texture.Get(), &rtvd, &pRenderTarget);
     if (FAILED(hr))
         return hr;
 
     D3D11_VIEWPORT viewport;
-    viewport.Width = static_cast<FLOAT>(mapSize);
-    viewport.Height = static_cast<FLOAT>(mapSize);
+    viewport.Width = static_cast<FLOAT>(size);
+    viewport.Height = static_cast<FLOAT>(size);
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
 
-    WorldViewProjectionConstantBuffer cb;
-    cb.World = DirectX::XMMatrixTranspose(DirectX::XMMatrixIdentity());
-    cb.Projection = DirectX::XMMatrixTranspose(DirectX::XMMatrixPerspectiveFovRH(DirectX::XM_PIDIV2, 1, 0.2f, 0.8f));
-
-    ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
-    ID3D11RenderTargetView* renderTarget = pRenderTarget.Get();
-    context->RSSetViewports(1, &viewport);
-    context->OMSetRenderTargets(1, &renderTarget, nullptr);
-
-    UINT stride = sizeof(VertexPosData);
-    UINT offset = 0;
-
-    // Set index buffer
-    context->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
-
-    // Set primitive topology
-    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    context->IASetInputLayout(m_pIrradianceInputLayout.Get());
-
-    // Render irradiance 
-    context->VSSetShader(m_pEnvironmentCubeVertexShader.Get(), nullptr, 0);
-    context->PSSetShader(m_pEnvironmentCubePixelShader.Get(), nullptr, 0);
-    context->PSSetShaderResources(0, 1, m_pEnvironmentShaderResourceView.GetAddressOf());
-    context->PSSetSamplers(0, 1, m_pSamplerLinear.GetAddressOf());
-    context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
-
-    float color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-    D3D11_BOX box = CD3D11_BOX(0, 0, 0, mapSize, mapSize, 1);
-    for (UINT i = 0; i < 6; ++i)
-    {
-        UINT constCoord = i / 2;
-        UINT widthCoord = i >= 2 ? 0 : 2;
-        UINT heightCoord = (i == 2 || i == 3) ? 2 : 1;
-        FLOAT leftBottomAngel[3] = { m_squareLeftBottomAngles[i].x, m_squareLeftBottomAngles[i].y, m_squareLeftBottomAngles[i].z };
-        FLOAT rightTopAngel[3] = { m_squareRightTopAngles[i].x, m_squareRightTopAngles[i].y, m_squareRightTopAngles[i].z };
-        FLOAT widthStep = (rightTopAngel[widthCoord] - leftBottomAngel[widthCoord]) / mapSize;
-        FLOAT heightStep = (rightTopAngel[heightCoord] - leftBottomAngel[heightCoord]) / mapSize;
-        FLOAT pos[3];
-        pos[constCoord] = leftBottomAngel[constCoord];
-        for (UINT k = 0; k <= mapSize; ++k)
-        {
-            for (UINT l = 0; l <= mapSize; ++l)
-            {
-                pos[widthCoord] = leftBottomAngel[widthCoord] + l * widthStep;
-                pos[heightCoord] = leftBottomAngel[heightCoord] + k * heightStep;
-                vertices[k * (mapSize + 1) + l].Pos = DirectX::XMFLOAT3(pos);
-            }
-        }
-
-        initData.pSysMem = vertices.data();
-        hr = m_pDeviceResources->GetDevice()->CreateBuffer(&vbd, &initData, vertexBuffer.ReleaseAndGetAddressOf());
-        if (FAILED(hr))
-            return hr;
-
-        context->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &stride, &offset);
-        cb.View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookAtRH(DirectX::XMVectorSet(0, 0, 0, 0), m_targers[i], DirectX::XMVectorNegate(m_ups[i])));
-        context->UpdateSubresource(m_pConstantBuffer.Get(), 0, nullptr, &cb, 0, 0);
-        context->ClearRenderTargetView(renderTarget, color);
-        context->DrawIndexed(indexCount, 0, 0);
-        m_pDeviceResources->GetDeviceContext()->CopySubresourceRegion(m_pEnvironmentCubeTexture.Get(), D3D11CalcSubresource(0, i, 1), 0, 0, 0, texture.Get(), 0, &box);
-    }
-
-    ID3D11ShaderResourceView* nullsrv[] = { nullptr };
-    context->PSSetShaderResources(0, 1, nullsrv);
-
-    D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
-    ZeroMemory(&srvd, sizeof(srvd));
-    srvd.Format = td.Format;
-    srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-    srvd.Texture2D.MostDetailedMip = 0;
-    srvd.Texture2D.MipLevels = 1;
-    hr = m_pDeviceResources->GetDevice()->CreateShaderResourceView(m_pEnvironmentCubeTexture.Get(), &srvd, &m_pEnvironmentCubeShaderResourceView);
-
-    return hr;
-}
-
-HRESULT Renderer::CreateIrradianceTexture()
-{
-    HRESULT hr = S_OK;
-
-    UINT mapSize = 32;
-
-    Microsoft::WRL::ComPtr<ID3D11Buffer> vertexBuffer;
-    Microsoft::WRL::ComPtr<ID3D11Buffer> indexBuffer;
-
-    std::vector<VertexPosData> vertices((mapSize + 1) * (mapSize + 1));
-    
-    std::vector<WORD> indices;
-    for (UINT i = 0; i < mapSize; ++i)
-    {
-        for (UINT j = 0; j < mapSize; ++j)
-        {
-            indices.push_back(i * (mapSize + 1) + j);
-            indices.push_back(i * (mapSize + 1) + j + 1);
-            indices.push_back((i + 1) * (mapSize + 1) + j);
-
-            indices.push_back(i * (mapSize + 1) + j + 1);
-            indices.push_back((i + 1) * (mapSize + 1) + j + 1);
-            indices.push_back((i + 1) * (mapSize + 1) + j);
-        }
-    }
-    UINT indexCount = mapSize * mapSize * 6;
-
-    D3D11_SUBRESOURCE_DATA initData;
-    ZeroMemory(&initData, sizeof(D3D11_SUBRESOURCE_DATA));
-    CD3D11_BUFFER_DESC vbd(sizeof(VertexPosData) * static_cast<UINT>(vertices.size()), D3D11_BIND_VERTEX_BUFFER);
-    CD3D11_BUFFER_DESC ibd(sizeof(WORD) * indexCount, D3D11_BIND_INDEX_BUFFER);
-    initData.pSysMem = indices.data();
-    hr = m_pDeviceResources->GetDevice()->CreateBuffer(&ibd, &initData, &indexBuffer);
-    if (FAILED(hr))
-        return hr;
-
-    D3D11_TEXTURE2D_DESC td;
-    ZeroMemory(&td, sizeof(td));
-    td.Width = mapSize;
-    td.Height = mapSize;
-    td.MipLevels = 1;
-    td.ArraySize = 6;
-    td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    td.SampleDesc.Count = 1;
-    td.SampleDesc.Quality = 0;
-    td.Usage = D3D11_USAGE_DEFAULT;
-    td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    td.CPUAccessFlags = 0;
-    td.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
-
-    hr = m_pDeviceResources->GetDevice()->CreateTexture2D(&td, nullptr, &m_pIrradianceTexture);
-    if (FAILED(hr))
-        return hr;
-    
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
-    td.ArraySize = 1;
-    td.BindFlags = D3D11_BIND_RENDER_TARGET;
-    td.MiscFlags = 0;
-
-    hr = m_pDeviceResources->GetDevice()->CreateTexture2D(&td, nullptr, &texture);
-    if (FAILED(hr))
-        return hr;
-
-    // Create render target view
-    CD3D11_RENDER_TARGET_VIEW_DESC rtvd(D3D11_RTV_DIMENSION_TEXTURE2D, td.Format);
-    Microsoft::WRL::ComPtr<ID3D11RenderTargetView> pRenderTarget;
-    hr = m_pDeviceResources->GetDevice()->CreateRenderTargetView(texture.Get(), &rtvd, pRenderTarget.ReleaseAndGetAddressOf());
-    if (FAILED(hr))
-        return hr;
-
-    D3D11_VIEWPORT viewport;
-    viewport.Width = static_cast<FLOAT>(mapSize);
-    viewport.Height = static_cast<FLOAT>(mapSize);
-    viewport.MinDepth = 0.0f;
-    viewport.MaxDepth = 1.0f;
-    viewport.TopLeftX = 0;
-    viewport.TopLeftY = 0;
-    
     WorldViewProjectionConstantBuffer cb;
     cb.World = DirectX::XMMatrixTranspose(DirectX::XMMatrixIdentity());
     cb.Projection = DirectX::XMMatrixTranspose(DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1, 0.2f, 0.8f));
@@ -484,14 +301,14 @@ HRESULT Renderer::CreateIrradianceTexture()
     context->IASetInputLayout(m_pIrradianceInputLayout.Get());
 
     // Render irradiance 
-    context->VSSetShader(m_pIrradianceVertexShader.Get(), nullptr, 0);
-    context->PSSetShader(m_pIrradiancePixelShader.Get(), nullptr, 0);
-    context->PSSetShaderResources(0, 1, m_pEnvironmentCubeShaderResourceView.GetAddressOf());
+    context->VSSetShader(vs, nullptr, 0);
+    context->PSSetShader(ps, nullptr, 0);
+    context->PSSetShaderResources(0, 1, &src);
     context->PSSetSamplers(0, 1, m_pSamplerLinear.GetAddressOf());
     context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
 
     float color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-    D3D11_BOX box = CD3D11_BOX(0, 0, 0, mapSize, mapSize, 1);
+    D3D11_BOX box = CD3D11_BOX(0, 0, 0, size, size, 1);
     for (UINT i = 0; i < 6; ++i)
     {
         UINT constCoord = i / 2;
@@ -499,43 +316,74 @@ HRESULT Renderer::CreateIrradianceTexture()
         UINT heightCoord = (i == 2 || i == 3) ? 2 : 1;
         FLOAT leftBottomAngel[3] = { m_squareLeftBottomAngles[i].x, m_squareLeftBottomAngles[i].y, m_squareLeftBottomAngles[i].z };
         FLOAT rightTopAngel[3] = { m_squareRightTopAngles[i].x, m_squareRightTopAngles[i].y, m_squareRightTopAngles[i].z };
-        FLOAT widthStep = (rightTopAngel[widthCoord] - leftBottomAngel[widthCoord]) / mapSize;
-        FLOAT heightStep = (rightTopAngel[heightCoord] - leftBottomAngel[heightCoord]) / mapSize;
         FLOAT pos[3];
         pos[constCoord] = leftBottomAngel[constCoord];
-        for (UINT k = 0; k <= mapSize; ++k)
-        {
-            for (UINT l = 0; l <= mapSize; ++l)
-            {
-                pos[widthCoord] = leftBottomAngel[widthCoord] + l * widthStep;
-                pos[heightCoord] = leftBottomAngel[heightCoord] + k * heightStep;
-                vertices[(mapSize - k) * (mapSize + 1) + l].Pos = DirectX::XMFLOAT3(pos);
-            }
-        }
+        pos[widthCoord] = leftBottomAngel[widthCoord];
+        pos[heightCoord] = leftBottomAngel[heightCoord];
+        vertices[0].Pos = DirectX::XMFLOAT3(pos);
+        pos[heightCoord] = rightTopAngel[heightCoord];
+        vertices[1].Pos = DirectX::XMFLOAT3(pos);
+        pos[widthCoord] = rightTopAngel[widthCoord];
+        vertices[2].Pos = DirectX::XMFLOAT3(pos);
+        pos[heightCoord] = leftBottomAngel[heightCoord];
+        vertices[3].Pos = DirectX::XMFLOAT3(pos);
 
-        initData.pSysMem = vertices.data();
-        hr = m_pDeviceResources->GetDevice()->CreateBuffer(&vbd, &initData, vertexBuffer.ReleaseAndGetAddressOf());
+        initData.pSysMem = vertices;
+        hr = device->CreateBuffer(&vbd, &initData, vertexBuffer.ReleaseAndGetAddressOf());
         if (FAILED(hr))
             return hr;
-        
-        context->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &stride, &offset);
 
+        context->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &stride, &offset);
         cb.View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookAtLH(DirectX::XMVectorSet(0, 0, 0, 0), m_targers[i], m_ups[i]));
         context->UpdateSubresource(m_pConstantBuffer.Get(), 0, nullptr, &cb, 0, 0);
         context->ClearRenderTargetView(renderTarget, color);
         context->DrawIndexed(indexCount, 0, 0);
-        m_pDeviceResources->GetDeviceContext()->CopySubresourceRegion(m_pIrradianceTexture.Get(), D3D11CalcSubresource(0, i, 1), 0, 0, 0, texture.Get(), 0, &box);
+        context->CopySubresourceRegion(dst, D3D11CalcSubresource(0, i, 1), 0, 0, 0, texture.Get(), 0, &box);
     }
 
     ID3D11ShaderResourceView* nullsrv[] = { nullptr };
     context->PSSetShaderResources(0, 1, nullsrv);
 
-    D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
-    ZeroMemory(&srvd, sizeof(srvd));
-    srvd.Format = td.Format;
-    srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-    srvd.Texture2D.MostDetailedMip = 0;
-    srvd.Texture2D.MipLevels = 1;
+    return hr;
+}
+
+HRESULT Renderer::CreateCubeTexture()
+{
+    HRESULT hr = S_OK;
+
+    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R8G8B8A8_UNORM, cubeSize, cubeSize, 6, 1, D3D11_BIND_SHADER_RESOURCE,
+        D3D11_USAGE_DEFAULT, 0, 1, 0, D3D11_RESOURCE_MISC_TEXTURECUBE);
+    hr = m_pDeviceResources->GetDevice()->CreateTexture2D(&td, nullptr, &m_pEnvironmentCubeTexture);
+    if (FAILED(hr))
+        return hr;
+
+    hr = CreateCubeTextureFromResource(cubeSize, m_pEnvironmentCubeTexture.Get(), m_pEnvironmentShaderResourceView.Get(),
+        m_pEnvironmentCubeVertexShader.Get(), m_pEnvironmentCubePixelShader.Get());
+    if (FAILED(hr))
+        return hr;
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvd = CD3D11_SHADER_RESOURCE_VIEW_DESC(D3D11_SRV_DIMENSION_TEXTURECUBE, td.Format, 0, 1);
+    hr = m_pDeviceResources->GetDevice()->CreateShaderResourceView(m_pEnvironmentCubeTexture.Get(), &srvd, &m_pEnvironmentCubeShaderResourceView);
+
+    return hr;
+}
+
+HRESULT Renderer::CreateIrradianceTexture()
+{
+    HRESULT hr = S_OK;
+
+    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R8G8B8A8_UNORM, mapSize, mapSize, 6, 1, D3D11_BIND_SHADER_RESOURCE,
+        D3D11_USAGE_DEFAULT, 0, 1, 0, D3D11_RESOURCE_MISC_TEXTURECUBE);
+    hr = m_pDeviceResources->GetDevice()->CreateTexture2D(&td, nullptr, &m_pIrradianceTexture);
+    if (FAILED(hr))
+        return hr;
+
+    hr = CreateCubeTextureFromResource(mapSize, m_pIrradianceTexture.Get(), m_pEnvironmentCubeShaderResourceView.Get(),
+        m_pIrradianceVertexShader.Get(), m_pIrradiancePixelShader.Get());
+    if (FAILED(hr))
+        return hr;
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvd = CD3D11_SHADER_RESOURCE_VIEW_DESC(D3D11_SRV_DIMENSION_TEXTURECUBE, td.Format, 0, 1);
     hr = m_pDeviceResources->GetDevice()->CreateShaderResourceView(m_pIrradianceTexture.Get(), &srvd, &m_pIrradianceShaderResourceView);
 
     return hr;

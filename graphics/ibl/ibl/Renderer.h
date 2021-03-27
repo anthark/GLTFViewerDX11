@@ -28,6 +28,7 @@ private:
     HRESULT CreateTexture();
     HRESULT CreateCubeTexture();
     HRESULT CreateIrradianceTexture();
+    HRESULT CreateCubeTextureFromResource(UINT size, ID3D11Texture2D* dst, ID3D11ShaderResourceView* src, ID3D11VertexShader* vs, ID3D11PixelShader* ps);
 
     void UpdatePerspective();
 
