@@ -351,7 +351,7 @@ HRESULT Renderer::CreateCubeTexture()
 {
     HRESULT hr = S_OK;
 
-    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R8G8B8A8_UNORM, cubeSize, cubeSize, 6, 1, D3D11_BIND_SHADER_RESOURCE,
+    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32G32B32A32_FLOAT, cubeSize, cubeSize, 6, 1, D3D11_BIND_SHADER_RESOURCE,
         D3D11_USAGE_DEFAULT, 0, 1, 0, D3D11_RESOURCE_MISC_TEXTURECUBE);
     hr = m_pDeviceResources->GetDevice()->CreateTexture2D(&td, nullptr, &m_pEnvironmentCubeTexture);
     if (FAILED(hr))
@@ -372,7 +372,7 @@ HRESULT Renderer::CreateIrradianceTexture()
 {
     HRESULT hr = S_OK;
 
-    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R8G8B8A8_UNORM, mapSize, mapSize, 6, 1, D3D11_BIND_SHADER_RESOURCE,
+    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32G32B32A32_FLOAT, mapSize, mapSize, 6, 1, D3D11_BIND_SHADER_RESOURCE,
         D3D11_USAGE_DEFAULT, 0, 1, 0, D3D11_RESOURCE_MISC_TEXTURECUBE);
     hr = m_pDeviceResources->GetDevice()->CreateTexture2D(&td, nullptr, &m_pIrradianceTexture);
     if (FAILED(hr))
