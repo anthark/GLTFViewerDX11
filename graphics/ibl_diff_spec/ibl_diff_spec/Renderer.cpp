@@ -89,6 +89,11 @@ HRESULT Renderer::CreateShaders()
     if (FAILED(hr))
         return hr;
 
+    // Create the vertex shader for irradiance
+    hr = CreateVertexShader(device, L"PrefilteredColorVertexShader.cso", bytes, &m_pPrefilteredColorVertexShader);
+    if (FAILED(hr))
+        return hr;
+
     // Define the input layout for irradiance
     D3D11_INPUT_ELEMENT_DESC irradianceLayout[] =
     {
@@ -113,6 +118,11 @@ HRESULT Renderer::CreateShaders()
 
     // Create the pixel shader for environment cube
     hr = CreatePixelShader(device, L"EnvironmentCubePixelShader.cso", bytes, &m_pEnvironmentCubePixelShader);
+    if (FAILED(hr))
+        return hr;
+
+    // Create the pixel shader for irradiance
+    hr = CreatePixelShader(device, L"PrefilteredColorPixelShader.cso", bytes, &m_pPrefilteredColorPixelShader);
     if (FAILED(hr))
         return hr;
 
@@ -250,7 +260,7 @@ HRESULT Renderer::CreateTexture()
     return hr;
 }
 
-HRESULT Renderer::CreateCubeTextureFromResource(UINT size, ID3D11Texture2D* dst, ID3D11ShaderResourceView* src, ID3D11VertexShader* vs, ID3D11PixelShader* ps)
+HRESULT Renderer::CreateCubeTextureFromResource(UINT size, ID3D11Texture2D* dst, ID3D11ShaderResourceView* src, ID3D11VertexShader* vs, ID3D11PixelShader* ps, UINT mipSlice)
 {
     HRESULT hr = S_OK;
 
@@ -355,7 +365,7 @@ HRESULT Renderer::CreateCubeTextureFromResource(UINT size, ID3D11Texture2D* dst,
         context->UpdateSubresource(m_pConstantBuffer.Get(), 0, nullptr, &cb, 0, 0);
         context->ClearRenderTargetView(renderTarget, color);
         context->DrawIndexed(indexCount, 0, 0);
-        context->CopySubresourceRegion(dst, D3D11CalcSubresource(0, i, 1), 0, 0, 0, texture.Get(), 0, &box);
+        context->CopySubresourceRegion(dst, D3D11CalcSubresource(mipSlice, i, dtd.MipLevels), 0, 0, 0, texture.Get(), 0, &box);
     }
 
     ID3D11ShaderResourceView* nullsrv[] = { nullptr };
@@ -402,6 +412,35 @@ HRESULT Renderer::CreateIrradianceTexture()
 
     D3D11_SHADER_RESOURCE_VIEW_DESC srvd = CD3D11_SHADER_RESOURCE_VIEW_DESC(D3D11_SRV_DIMENSION_TEXTURECUBE, td.Format, 0, 1);
     hr = m_pDeviceResources->GetDevice()->CreateShaderResourceView(m_pIrradianceTexture.Get(), &srvd, &m_pIrradianceShaderResourceView);
+
+    return hr;
+}
+
+HRESULT Renderer::CreatePrefilteredColorTexture()
+{
+    HRESULT hr = S_OK;
+
+    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32G32B32A32_FLOAT, 128, 128, 6, 5, D3D11_BIND_SHADER_RESOURCE,
+        D3D11_USAGE_DEFAULT, 0, 1, 0, D3D11_RESOURCE_MISC_TEXTURECUBE);
+    hr = m_pDeviceResources->GetDevice()->CreateTexture2D(&td, nullptr, &m_pPrefilteredColorTexture);
+    if (FAILED(hr))
+        return hr;
+
+    ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
+    context->PSSetConstantBuffers(1, 1, m_pMaterialBuffer.GetAddressOf());
+    for (UINT i = 0; i < td.MipLevels; ++i)
+    {
+        m_materialBufferData.Roughness = 0.25f * i;
+        context->UpdateSubresource(m_pMaterialBuffer.Get(), 0, nullptr, &m_materialBufferData, 0, 0);
+
+        hr = CreateCubeTextureFromResource(128 / (i + 1), m_pPrefilteredColorTexture.Get(), m_pEnvironmentCubeShaderResourceView.Get(),
+            m_pPrefilteredColorVertexShader.Get(), m_pPrefilteredColorPixelShader.Get(), i);
+        if (FAILED(hr))
+            return hr;
+    }
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvd = CD3D11_SHADER_RESOURCE_VIEW_DESC(D3D11_SRV_DIMENSION_TEXTURECUBE, td.Format, 0, 1);
+    hr = m_pDeviceResources->GetDevice()->CreateShaderResourceView(m_pPrefilteredColorTexture.Get(), &srvd, &m_pPrefilteredColorShaderResourceView);
 
     return hr;
 }
@@ -465,6 +504,10 @@ HRESULT Renderer::CreateDeviceDependentResources()
     hr = CreateIrradianceTexture();
     if (FAILED(hr))
        return hr;
+
+    hr = CreatePrefilteredColorTexture();
+    if (FAILED(hr))
+        return hr;
     /*
     if (g_pRDApi)
     {
@@ -609,6 +652,7 @@ void Renderer::RenderInTexture()
     context->PSSetConstantBuffers(2, 1, m_pLightColorBuffer.GetAddressOf());
     context->PSSetConstantBuffers(3, 1, m_pMaterialBuffer.GetAddressOf());
     context->PSSetShaderResources(0, 1, m_pIrradianceShaderResourceView.GetAddressOf());
+    context->PSSetShaderResources(1, 1, m_pPrefilteredColorShaderResourceView.GetAddressOf());
     context->PSSetSamplers(0, 1, m_pSamplerStates[0].GetAddressOf());
 
     switch (m_pSettings->GetShaderMode())

@@ -149,6 +149,12 @@
     <FxCompile Include="EnvironmentCubeVertexShader.hlsl">
       <Filter>EnvironmentCubeShaders</Filter>
     </FxCompile>
+    <FxCompile Include="PrefilteredColorPixelShader.hlsl">
+      <Filter>IBLShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="PrefilteredColorVertexShader.hlsl">
+      <Filter>IBLShaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DeviceResources.h">

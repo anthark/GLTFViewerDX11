@@ -1,6 +1,7 @@
 #define NUM_LIGHTS 3
 
 TextureCube cubeTexture : register(t0);
+TextureCube prefilteredColorTexture : register(t1);
 
 SamplerState MinMagMipLinear : register(s0);
 

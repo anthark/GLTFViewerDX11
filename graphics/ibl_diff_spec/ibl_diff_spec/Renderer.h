@@ -28,7 +28,8 @@ private:
     HRESULT CreateTexture();
     HRESULT CreateCubeTexture();
     HRESULT CreateIrradianceTexture();
-    HRESULT CreateCubeTextureFromResource(UINT size, ID3D11Texture2D* dst, ID3D11ShaderResourceView* src, ID3D11VertexShader* vs, ID3D11PixelShader* ps);
+    HRESULT CreatePrefilteredColorTexture();
+    HRESULT CreateCubeTextureFromResource(UINT size, ID3D11Texture2D* dst, ID3D11ShaderResourceView* src, ID3D11VertexShader* vs, ID3D11PixelShader* ps, UINT mipSlice = 0);
 
     void UpdatePerspective();
 
@@ -54,9 +55,12 @@ private:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pEnvironmentCubeShaderResourceView;
     Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pIrradianceTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pIrradianceShaderResourceView;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pPrefilteredColorTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pPrefilteredColorShaderResourceView;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pVertexShader;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pEnvironmentVertexShader;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pIrradianceVertexShader;
+    Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pPrefilteredColorVertexShader;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pEnvironmentCubeVertexShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pNDPixelShader;
@@ -64,6 +68,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pFPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pEnvironmentPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pIrradiancePixelShader;
+    Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pPrefilteredColorPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pEnvironmentCubePixelShader;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightPositionBuffer;
