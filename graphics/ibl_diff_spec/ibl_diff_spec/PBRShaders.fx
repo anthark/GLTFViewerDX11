@@ -2,7 +2,7 @@
 
 TextureCube cubeTexture : register(t0);
 
-SamplerState samState : register(s0);
+SamplerState MinMagMipLinear : register(s0);
 
 static const float PI = 3.14159265358979323846f;
 
@@ -140,7 +140,7 @@ float4 ps_main(PS_INPUT input) : SV_TARGET
 	color2 = LO_i(input.WorldPos.xyz, n, v, LightPositions[1] - input.WorldPos.xyz, LightColors[1]);
 	color3 = LO_i(input.WorldPos.xyz, n, v, LightPositions[2] - input.WorldPos.xyz, LightColors[2]);
 
-    float3 irradiance = cubeTexture.Sample(samState, n).rgb;
+    float3 irradiance = cubeTexture.Sample(MinMagMipLinear, n).rgb;
     float3 FR = fresnelRoughness(n, v, Roughness);
     float3 ambient = (1 - FR) * irradiance * (1 - Metalness);
 

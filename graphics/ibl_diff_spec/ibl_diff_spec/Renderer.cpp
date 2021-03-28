@@ -235,6 +235,7 @@ HRESULT Renderer::CreateTexture()
     if (FAILED(hr))
         return hr;
 
+    m_pSamplerStates.resize(1);
     D3D11_SAMPLER_DESC sd;
     ZeroMemory(&sd, sizeof(sd));
     sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -244,7 +245,7 @@ HRESULT Renderer::CreateTexture()
     sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
     sd.MinLOD = 0;
     sd.MaxLOD = D3D11_FLOAT32_MAX;
-    hr = device->CreateSamplerState(&sd, &m_pSamplerLinear);
+    hr = device->CreateSamplerState(&sd, &m_pSamplerStates[0]);
 
     return hr;
 }
@@ -320,7 +321,7 @@ HRESULT Renderer::CreateCubeTextureFromResource(UINT size, ID3D11Texture2D* dst,
     context->VSSetShader(vs, nullptr, 0);
     context->PSSetShader(ps, nullptr, 0);
     context->PSSetShaderResources(0, 1, &src);
-    context->PSSetSamplers(0, 1, m_pSamplerLinear.GetAddressOf());
+    context->PSSetSamplers(0, 1, m_pSamplerStates[0].GetAddressOf());
     context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
 
     float color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -608,7 +609,7 @@ void Renderer::RenderInTexture()
     context->PSSetConstantBuffers(2, 1, m_pLightColorBuffer.GetAddressOf());
     context->PSSetConstantBuffers(3, 1, m_pMaterialBuffer.GetAddressOf());
     context->PSSetShaderResources(0, 1, m_pIrradianceShaderResourceView.GetAddressOf());
-    context->PSSetSamplers(0, 1, m_pSamplerLinear.GetAddressOf());
+    context->PSSetSamplers(0, 1, m_pSamplerStates[0].GetAddressOf());
 
     switch (m_pSettings->GetShaderMode())
     {
@@ -677,7 +678,7 @@ void Renderer::RenderEnvironment()
     context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
     context->PSSetShader(m_pEnvironmentPixelShader.Get(), nullptr, 0);
     context->PSSetShaderResources(0, 1, m_pEnvironmentCubeShaderResourceView.GetAddressOf());
-    context->PSSetSamplers(0, 1, m_pSamplerLinear.GetAddressOf());
+    context->PSSetSamplers(0, 1, m_pSamplerStates[0].GetAddressOf());
     context->DrawIndexed(m_indexCount, 0, 0);
 
     ID3D11ShaderResourceView* nullsrv[] = { nullptr };

@@ -1,6 +1,6 @@
 Texture2D<float4> sourceTexture : register(t0);
 
-SamplerState samState : register(s0);
+SamplerState MinMagMipLinear : register(s0);
 
 cbuffer AverageLuminanceBuffer : register(b0)
 {
@@ -23,12 +23,12 @@ PS_INPUT vs_copy_main(uint input : SV_VERTEXID)
 
 float4 ps_copy_main(PS_INPUT input) : SV_TARGET
 {
-    return sourceTexture.Sample(samState, input.Tex);
+    return sourceTexture.Sample(MinMagMipLinear, input.Tex);
 }
 
 float4 ps_luminance_main(PS_INPUT input) : SV_TARGET
 {
-    float4 color = sourceTexture.Sample(samState, input.Tex);
+    float4 color = sourceTexture.Sample(MinMagMipLinear, input.Tex);
     float l = 0.2126f * color.r + 0.7151f * color.g + 0.0722f * color.b;
     return log(l + 1);
 }
@@ -70,6 +70,6 @@ float3 LinearToSRGB(float3 color)
 
 float4 ps_tonemap_main(PS_INPUT input) : SV_TARGET
 {
-    float4 color = sourceTexture.Sample(samState, input.Tex);
+    float4 color = sourceTexture.Sample(MinMagMipLinear, input.Tex);
     return float4(LinearToSRGB(TonemapFilmic(color.xyz)), color.a);
 }

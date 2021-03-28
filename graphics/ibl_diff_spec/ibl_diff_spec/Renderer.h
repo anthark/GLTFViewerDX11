@@ -54,7 +54,6 @@ private:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pEnvironmentCubeShaderResourceView;
     Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pIrradianceTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pIrradianceShaderResourceView;
-    Microsoft::WRL::ComPtr<ID3D11SamplerState>       m_pSamplerLinear;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pVertexShader;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pEnvironmentVertexShader;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pIrradianceVertexShader;
@@ -70,6 +69,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightPositionBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightColorBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pMaterialBuffer;
+
+    std::vector<Microsoft::WRL::ComPtr<ID3D11SamplerState>> m_pSamplerStates;
 
     WorldViewProjectionConstantBuffer m_constantBufferData;
     LightPositionConstantBuffer       m_lightPositionBufferData;

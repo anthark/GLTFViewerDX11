@@ -1,6 +1,6 @@
 TextureCube cubeTexture : register(t0);
 
-SamplerState samState : register(s0);
+SamplerState MinMagMipLinear : register(s0);
 
 static const float PI = 3.14159265358979323846f;
 static const int N1 = 200;
@@ -40,14 +40,14 @@ float3 Irradiance(float3 normal)
             float theta = j * (PI / 2 / N2);
             float3 tangentSample = float3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
             float3 sampleVec = tangentSample.x * tangent + tangentSample.y * bitangent + tangentSample.z * normal;
-            irradiance += cubeTexture.Sample(samState, sampleVec).xyz * cos(theta) * sin(theta);
+            irradiance += cubeTexture.Sample(MinMagMipLinear, sampleVec).xyz * cos(theta) * sin(theta);
         }
     }
     irradiance = PI * irradiance / (N1 * N2);
     return irradiance;
 }
 
-PS_INPUT vs_main(VS_INPUT input)
+PS_INPUT ivs_main(VS_INPUT input)
 {
     PS_INPUT output = (PS_INPUT) 0;
     output.Pos = float4(input.Pos, 1.0f);
@@ -58,7 +58,7 @@ PS_INPUT vs_main(VS_INPUT input)
     return output;
 }
 
-float4 ps_main(PS_INPUT input) : SV_TARGET
+float4 ips_main(PS_INPUT input) : SV_TARGET
 {
     return float4(Irradiance(normalize(input.Tex)), 1.0f);
 }

@@ -1,6 +1,6 @@
 Texture2D<float4> envTexture : register(t0);
 
-SamplerState samState : register(s0);
+SamplerState MinMagMipLinear : register(s0);
 
 static const float PI = 3.14159265358979323846f;
 
@@ -41,5 +41,5 @@ float4 ps_main(PS_INPUT input) : SV_TARGET
     float u = 1.0f - atan2(pos.z, pos.x) / (2 * PI);
     float v = 0.5f - asin(pos.y) / PI;
 
-    return float4(envTexture.Sample(samState, float2(u, v)).xyz, 1.0f);
+    return float4(envTexture.Sample(MinMagMipLinear, float2(u, v)).xyz, 1.0f);
 }
