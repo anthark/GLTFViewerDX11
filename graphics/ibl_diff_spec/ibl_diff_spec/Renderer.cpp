@@ -126,6 +126,16 @@ HRESULT Renderer::CreateShaders()
     if (FAILED(hr))
         return hr;
 
+    // Create the pixel shader for preintegrated BRDF
+    hr = CreatePixelShader(device, L"PreintegratedBRDFPixelShader.cso", bytes, &m_pPreintegratedBRDFPixelShader);
+    if (FAILED(hr))
+        return hr;
+
+    // Create the vertex shader for preintegrated BRDF
+    hr = CreateVertexShader(device, L"PreintegratedBRDFVertexShader.cso", bytes, &m_pPreintegratedBRDFVertexShader);
+    if (FAILED(hr))
+        return hr;
+
     // Create the constant buffer for world-view-projection matrices
     CD3D11_BUFFER_DESC cbd(
         sizeof(WorldViewProjectionConstantBuffer),
@@ -445,6 +455,94 @@ HRESULT Renderer::CreatePrefilteredColorTexture()
     return hr;
 }
 
+HRESULT Renderer::CreatePreintegratedBRDFTexture()
+{
+    HRESULT hr = S_OK;
+
+    Microsoft::WRL::ComPtr<ID3D11Buffer> vertexBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> indexBuffer;
+
+    VertexPosData vertices[4] = {
+        {DirectX::XMFLOAT3(0.0f, 0.0f, 0.5f)},
+        {DirectX::XMFLOAT3(0.0f, 1.0f, 0.5f)},
+        {DirectX::XMFLOAT3(1.0f, 1.0f, 0.5f)},
+        {DirectX::XMFLOAT3(1.0f, 0.0f, 0.5f)}
+    };
+
+    WORD indices[6] = {
+        0, 1, 2,
+        2, 3, 0
+    };
+    UINT indexCount = 6;
+
+    ID3D11Device* device = m_pDeviceResources->GetDevice();
+
+    D3D11_SUBRESOURCE_DATA initData;
+    ZeroMemory(&initData, sizeof(D3D11_SUBRESOURCE_DATA));
+    CD3D11_BUFFER_DESC vbd(sizeof(VertexPosData) * 4, D3D11_BIND_VERTEX_BUFFER);
+    initData.pSysMem = vertices;
+    hr = device->CreateBuffer(&vbd, &initData, &vertexBuffer);
+    if (FAILED(hr))
+        return hr;
+
+    CD3D11_BUFFER_DESC ibd(sizeof(WORD) * indexCount, D3D11_BIND_INDEX_BUFFER);
+    initData.pSysMem = indices;
+    hr = device->CreateBuffer(&ibd, &initData, &indexBuffer);
+    if (FAILED(hr))
+        return hr;
+
+    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32G32B32A32_FLOAT, 128, 128, 1, 1, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET);
+    hr = device->CreateTexture2D(&td, nullptr, &m_pPreintegratedBRDFTexture);
+    if (FAILED(hr))
+        return hr;
+
+    ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
+    CD3D11_RENDER_TARGET_VIEW_DESC rtvd(D3D11_RTV_DIMENSION_TEXTURE2D, td.Format);
+    Microsoft::WRL::ComPtr<ID3D11RenderTargetView> pRenderTarget;
+    hr = device->CreateRenderTargetView(m_pPreintegratedBRDFTexture.Get(), &rtvd, &pRenderTarget);
+    if (FAILED(hr))
+        return hr;
+
+    D3D11_VIEWPORT viewport;
+    viewport.Width = static_cast<FLOAT>(128);
+    viewport.Height = static_cast<FLOAT>(128);
+    viewport.MinDepth = 0.0f;
+    viewport.MaxDepth = 1.0f;
+    viewport.TopLeftX = 0;
+    viewport.TopLeftY = 0;
+
+    WorldViewProjectionConstantBuffer cb;
+    cb.World = DirectX::XMMatrixTranspose(DirectX::XMMatrixIdentity());
+    cb.Projection = DirectX::XMMatrixTranspose(DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1, 0.2f, 0.8f));
+
+    ID3D11RenderTargetView* renderTarget = pRenderTarget.Get();
+    context->RSSetViewports(1, &viewport);
+    context->OMSetRenderTargets(1, &renderTarget, nullptr);
+
+    UINT stride = sizeof(VertexPosData);
+    UINT offset = 0;
+    context->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &stride, &offset);
+    context->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    context->IASetInputLayout(m_pIrradianceInputLayout.Get());
+
+    context->VSSetShader(m_pPreintegratedBRDFVertexShader.Get(), nullptr, 0);
+    context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
+    context->PSSetShader(m_pPreintegratedBRDFPixelShader.Get(), nullptr, 0);
+
+    float color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    cb.View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookAtLH(DirectX::XMVectorSet(0.5f, 0.5f, 0, 0), DirectX::XMVectorSet(0.5f, 0.5f, 1.0f, 0), DirectX::XMVectorSet(0, 1.0f, 0, 0)));
+    context->UpdateSubresource(m_pConstantBuffer.Get(), 0, nullptr, &cb, 0, 0);
+    context->ClearRenderTargetView(renderTarget, color);
+    context->DrawIndexed(indexCount, 0, 0);
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvd = CD3D11_SHADER_RESOURCE_VIEW_DESC(D3D11_SRV_DIMENSION_TEXTURE2D, td.Format);
+    hr = device->CreateShaderResourceView(m_pPreintegratedBRDFTexture.Get(), &srvd, &m_pPreintegratedBRDFShaderResourceView);
+
+    return hr;
+}
+
 void Renderer::UpdatePerspective()
 {
     m_constantBufferData.Projection = DirectX::XMMatrixTranspose(
@@ -508,6 +606,11 @@ HRESULT Renderer::CreateDeviceDependentResources()
     hr = CreatePrefilteredColorTexture();
     if (FAILED(hr))
         return hr;
+
+    hr = CreatePreintegratedBRDFTexture();
+    if (FAILED(hr))
+        return hr;
+
     /*
     if (g_pRDApi)
     {
