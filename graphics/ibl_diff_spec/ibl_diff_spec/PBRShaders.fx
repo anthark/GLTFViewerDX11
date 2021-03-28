@@ -1,9 +1,11 @@
 #define NUM_LIGHTS 3
 
-TextureCube cubeTexture : register(t0);
+TextureCube irradianceTexture : register(t0);
 TextureCube prefilteredColorTexture : register(t1);
+Texture2D<float4> preintegratedBRDFTexture : register(t2);
 
 SamplerState MinMagMipLinear : register(s0);
+SamplerState MinMagLinearMipPointBorder : register(s1);
 
 static const float PI = 3.14159265358979323846f;
 
@@ -103,12 +105,6 @@ float4 fps_main(PS_INPUT input) : SV_TARGET
     return float4(fresnel(normalize(input.Normal), normalize(CameraPos.xyz - input.WorldPos.xyz), normalize(LightPositions[0] - input.WorldPos.xyz)), 1.0f);
 }
 
-float3 fresnelRoughness(float3 n, float3 v, float roughness)
-{
-    float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), Albedo, Metalness);
-    return (F0 + (max(1 - roughness, F0) - F0) * pow(1 - max(dot(n, v), 0), 5));
-}
-
 float3 BRDF(float3 p, float3 n, float3 v, float3 l)
 {
 	float D = normalDistribution(n, v, l);
@@ -131,6 +127,25 @@ float3 LO_i(float3 p, float3 n, float3 v, float3 lightDir, float4 lightColor)
     return BRDF(p, n, v, l) * lightColor.rgb * atten * max(dot(l, n), 0) * lightColor.a;
 }
 
+float3 FresnelSchlickRoughnessFunction(float3 F0, float3 n, float3 v, float roughness)
+{
+    return (F0 + (max(1 - roughness, F0) - F0) * pow(1 - max(dot(n, v), 0), 5));
+}
+
+float3 Ambient(float3 n, float3 v)
+{
+    static const float MAX_REFLECTION_LOD = 4.0;
+    float3 r = -normalize(reflect(v, n));
+    float3 prefilteredColor = prefilteredColorTexture.SampleLevel(MinMagMipLinear, r, Roughness * MAX_REFLECTION_LOD).xyz;
+    float3 F0 = lerp(float3(0.04, 0.04, 0.04), float3(0.91f, 0.92f, 0.92f), Metalness);
+    float3 F = FresnelSchlickRoughnessFunction(F0, n, v, Roughness);
+    float2 envBRDF = preintegratedBRDFTexture.Sample(MinMagLinearMipPointBorder, float2(max(dot(n, v), 0.0), Roughness)).xy;
+    float3 specular = prefilteredColor * (F0 * envBRDF.x + envBRDF.y);
+
+    float3 irradiance = irradianceTexture.Sample(MinMagMipLinear, n).xyz;
+    return (1 - F) * irradiance * Albedo * (1 - Metalness) + specular;
+}
+
 float4 ps_main(PS_INPUT input) : SV_TARGET
 {
 	float3 color1, color2, color3;
@@ -141,9 +156,7 @@ float4 ps_main(PS_INPUT input) : SV_TARGET
 	color2 = LO_i(input.WorldPos.xyz, n, v, LightPositions[1] - input.WorldPos.xyz, LightColors[1]);
 	color3 = LO_i(input.WorldPos.xyz, n, v, LightPositions[2] - input.WorldPos.xyz, LightColors[2]);
 
-    float3 irradiance = cubeTexture.Sample(MinMagMipLinear, n).rgb;
-    float3 FR = fresnelRoughness(n, v, Roughness);
-    float3 ambient = (1 - FR) * irradiance * (1 - Metalness);
+    float3 ambient = Ambient(n, v);
 
     return float4(color1 + color2 + color3 + ambient, 1.0f);
 }

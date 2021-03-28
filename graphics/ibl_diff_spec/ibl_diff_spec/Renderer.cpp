@@ -255,7 +255,7 @@ HRESULT Renderer::CreateTexture()
     if (FAILED(hr))
         return hr;
 
-    m_pSamplerStates.resize(1);
+    m_pSamplerStates.resize(2);
     D3D11_SAMPLER_DESC sd;
     ZeroMemory(&sd, sizeof(sd));
     sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -266,6 +266,13 @@ HRESULT Renderer::CreateTexture()
     sd.MinLOD = 0;
     sd.MaxLOD = D3D11_FLOAT32_MAX;
     hr = device->CreateSamplerState(&sd, &m_pSamplerStates[0]);
+    if (FAILED(hr))
+        return hr;
+
+    sd.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+    sd.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+    sd.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+    hr = device->CreateSamplerState(&sd, &m_pSamplerStates[1]);
 
     return hr;
 }
@@ -443,7 +450,7 @@ HRESULT Renderer::CreatePrefilteredColorTexture()
         m_materialBufferData.Roughness = 0.25f * i;
         context->UpdateSubresource(m_pMaterialBuffer.Get(), 0, nullptr, &m_materialBufferData, 0, 0);
 
-        hr = CreateCubeTextureFromResource(128 / (i + 1), m_pPrefilteredColorTexture.Get(), m_pEnvironmentCubeShaderResourceView.Get(),
+        hr = CreateCubeTextureFromResource(128 / (UINT)pow(2, i), m_pPrefilteredColorTexture.Get(), m_pEnvironmentCubeShaderResourceView.Get(),
             m_pPrefilteredColorVertexShader.Get(), m_pPrefilteredColorPixelShader.Get(), i);
         if (FAILED(hr))
             return hr;
@@ -756,7 +763,9 @@ void Renderer::RenderInTexture()
     context->PSSetConstantBuffers(3, 1, m_pMaterialBuffer.GetAddressOf());
     context->PSSetShaderResources(0, 1, m_pIrradianceShaderResourceView.GetAddressOf());
     context->PSSetShaderResources(1, 1, m_pPrefilteredColorShaderResourceView.GetAddressOf());
+    context->PSSetShaderResources(2, 1, m_pPreintegratedBRDFShaderResourceView.GetAddressOf());
     context->PSSetSamplers(0, 1, m_pSamplerStates[0].GetAddressOf());
+    context->PSSetSamplers(1, 1, m_pSamplerStates[1].GetAddressOf());
 
     switch (m_pSettings->GetShaderMode())
     {
