@@ -87,12 +87,6 @@
     <ClCompile Include="..\..\ImGui\imgui_widgets.cpp">
       <Filter>Исходные файлы\ImGui</Filter>
     </ClCompile>
-    <ClCompile Include="WICTextureLoader.cpp">
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
-    <ClCompile Include="DDSTextureLoader11.cpp">
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="PostProcessShaders.fx">
@@ -214,18 +208,12 @@
     <ClInclude Include="..\..\ImGui\imstb_truetype.h">
       <Filter>Файлы заголовков\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="WICTextureLoader.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="DDSTextureLoader11.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="StbImage.h">
+    <ClInclude Include="stb_image.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="env.png">
+    <Image Include="env.hdr">
       <Filter>Файлы ресурсов</Filter>
     </Image>
   </ItemGroup>

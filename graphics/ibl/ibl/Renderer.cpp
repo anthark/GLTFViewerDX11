@@ -7,10 +7,10 @@
 
 #include "Renderer.h"
 #include "Utils.h"
-#include "WICTextureLoader.h"
-#include "DDSTextureLoader11.h"
-
 #include "renderdoc_app.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 const float sphereRadius = 0.5f;
 const UINT cubeSize = 512;
@@ -214,8 +214,24 @@ HRESULT Renderer::CreateTexture()
 {
     HRESULT hr = S_OK;
 
-    hr = CreateWICTextureFromFile(m_pDeviceResources->GetDevice(), m_pDeviceResources->GetDeviceContext(), L"env.png",
-        &m_pEnvironmentTexture, &m_pEnvironmentShaderResourceView);
+    int w, h, n;
+    float* data = stbi_loadf("env.hdr", &w, &h, &n, STBI_rgb_alpha);
+    if (data == nullptr)
+        return E_FAIL;
+
+    ID3D11Device* device = m_pDeviceResources->GetDevice();
+
+    CD3D11_TEXTURE2D_DESC td(DXGI_FORMAT_R32G32B32A32_FLOAT, w, h, 1, 1, D3D11_BIND_SHADER_RESOURCE);
+    D3D11_SUBRESOURCE_DATA initData;
+    initData.pSysMem = data;
+    initData.SysMemPitch = 4 * w * sizeof(float);
+    hr = device->CreateTexture2D(&td, &initData, &m_pEnvironmentTexture);
+    stbi_image_free(data);
+    if (FAILED(hr))
+        return hr;
+
+    CD3D11_SHADER_RESOURCE_VIEW_DESC srvd(D3D11_SRV_DIMENSION_TEXTURE2D, td.Format);
+    hr = device->CreateShaderResourceView(m_pEnvironmentTexture.Get(), &srvd, &m_pEnvironmentShaderResourceView);
     if (FAILED(hr))
         return hr;
 
@@ -228,7 +244,7 @@ HRESULT Renderer::CreateTexture()
     sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
     sd.MinLOD = 0;
     sd.MaxLOD = D3D11_FLOAT32_MAX;
-    hr = m_pDeviceResources->GetDevice()->CreateSamplerState(&sd, &m_pSamplerLinear);
+    hr = device->CreateSamplerState(&sd, &m_pSamplerLinear);
 
     return hr;
 }
