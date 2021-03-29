@@ -44,4 +44,5 @@ struct MaterialConstantBuffer
 	DirectX::XMFLOAT3 Albedo;
 	float Roughness;
 	float Metalness;
+	DirectX::XMFLOAT3 MetalF0;
 };

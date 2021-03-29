@@ -137,9 +137,6 @@
     <FxCompile Include="IrradiancePixelShader.hlsl">
       <Filter>IBLShaders</Filter>
     </FxCompile>
-    <FxCompile Include="IrradianceVertexShader.hlsl">
-      <Filter>IBLShaders</Filter>
-    </FxCompile>
     <FxCompile Include="EnvironmentCubePixelShader.hlsl">
       <Filter>EnvironmentCubeShaders</Filter>
     </FxCompile>
@@ -152,13 +149,10 @@
     <FxCompile Include="PrefilteredColorPixelShader.hlsl">
       <Filter>IBLShaders</Filter>
     </FxCompile>
-    <FxCompile Include="PrefilteredColorVertexShader.hlsl">
-      <Filter>IBLShaders</Filter>
-    </FxCompile>
     <FxCompile Include="PreintegratedBRDFPixelShader.hlsl">
       <Filter>IBLShaders</Filter>
     </FxCompile>
-    <FxCompile Include="PreintegratedBRDFVertexShader.hlsl">
+    <FxCompile Include="IBLVertexShader.hlsl">
       <Filter>IBLShaders</Filter>
     </FxCompile>
   </ItemGroup>

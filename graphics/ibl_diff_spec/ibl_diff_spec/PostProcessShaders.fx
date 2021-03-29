@@ -2,6 +2,8 @@ Texture2D<float4> sourceTexture : register(t0);
 
 SamplerState MinMagMipLinear : register(s0);
 
+static const float EXPOSURE_RATIO = 7.0f;
+
 cbuffer AverageLuminanceBuffer : register(b0)
 {
     float AverageLuminance;
@@ -57,7 +59,7 @@ float3 TonemapFilmic(float3 color)
 {
     static const float W = 11.2; // Linear White Point Value
 
-    float e = Exposure();
+    float e = Exposure() * EXPOSURE_RATIO;
     float3 curr = Uncharted2Tonemap(e * color);
     float3 whiteScale = 1.0f / Uncharted2Tonemap(W);
     return curr * whiteScale;

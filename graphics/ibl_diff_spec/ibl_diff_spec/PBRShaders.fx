@@ -8,6 +8,7 @@ SamplerState MinMagMipLinear : register(s0);
 SamplerState MinMagLinearMipPointBorder : register(s1);
 
 static const float PI = 3.14159265358979323846f;
+static const float MAX_REFLECTION_LOD = 4.0;
 
 cbuffer Transformation: register(b0)
 {
@@ -32,6 +33,7 @@ cbuffer Material : register(b3)
 	float3 Albedo;
 	float Roughness;
 	float Metalness;
+    float3 MetalF0;
 }
 
 struct VS_INPUT
@@ -134,10 +136,9 @@ float3 FresnelSchlickRoughnessFunction(float3 F0, float3 n, float3 v, float roug
 
 float3 Ambient(float3 n, float3 v)
 {
-    static const float MAX_REFLECTION_LOD = 4.0;
-    float3 r = -normalize(reflect(v, n));
+    float3 r = normalize(reflect(-v, n));
     float3 prefilteredColor = prefilteredColorTexture.SampleLevel(MinMagMipLinear, r, Roughness * MAX_REFLECTION_LOD).xyz;
-    float3 F0 = lerp(float3(0.04, 0.04, 0.04), float3(0.91f, 0.92f, 0.92f), Metalness);
+    float3 F0 = lerp(float3(0.04, 0.04, 0.04), MetalF0, Metalness);
     float3 F = FresnelSchlickRoughnessFunction(F0, n, v, Roughness);
     float2 envBRDF = preintegratedBRDFTexture.Sample(MinMagLinearMipPointBorder, float2(max(dot(n, v), 0.0), Roughness)).xy;
     float3 specular = prefilteredColor * (F0 * envBRDF.x + envBRDF.y);

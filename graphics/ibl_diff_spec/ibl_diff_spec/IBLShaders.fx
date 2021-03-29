@@ -5,6 +5,8 @@ SamplerState MinMagMipLinear : register(s0);
 static const float PI = 3.14159265358979323846f;
 static const int N1 = 200;
 static const int N2 = 50;
+static const uint PREFILTERED_COLOR_SAMPLE_COUNT = 1024u;
+static const uint PREINTEGRATED_BRDF_SAMPLE_COUNT = 1024u;
 
 cbuffer Transformation : register(b0)
 {
@@ -19,6 +21,7 @@ cbuffer Material : register(b1)
     float3 Albedo;
     float Roughness;
     float Metalness;
+    float3 MetalF0;
 }
 
 struct VS_INPUT
@@ -31,6 +34,17 @@ struct PS_INPUT
     float4 Pos : SV_POSITION;
     float3 Tex : TEXCOORD;
 };
+
+PS_INPUT vs_main(VS_INPUT input)
+{
+    PS_INPUT output = (PS_INPUT) 0;
+    output.Pos = float4(input.Pos, 1.0f);
+    output.Pos = mul(output.Pos, World);
+    output.Pos = mul(output.Pos, View);
+    output.Pos = mul(output.Pos, Projection);
+    output.Tex = input.Pos;
+    return output;
+}
 
 float3 Irradiance(float3 normal)
 {
@@ -52,17 +66,6 @@ float3 Irradiance(float3 normal)
     }
     irradiance = PI * irradiance / (N1 * N2);
     return irradiance;
-}
-
-PS_INPUT ivs_main(VS_INPUT input)
-{
-    PS_INPUT output = (PS_INPUT) 0;
-    output.Pos = float4(input.Pos, 1.0f);
-    output.Pos = mul(output.Pos, World);
-    output.Pos = mul(output.Pos, View);
-    output.Pos = mul(output.Pos, Projection);
-    output.Tex = input.Pos;
-    return output;
 }
 
 float4 ips_main(PS_INPUT input) : SV_TARGET
@@ -110,10 +113,9 @@ float3 PrefilteredColor(float3 norm)
     float3 view = norm;
     float totalWeight = 0.0;
     float3 prefilteredColor = float3(0, 0, 0);
-    static const uint SAMPLE_COUNT = 1024u;
-    for (uint i = 0u; i < SAMPLE_COUNT; ++i)
+    for (uint i = 0u; i < PREFILTERED_COLOR_SAMPLE_COUNT; ++i)
     {
-        float2 Xi = Hammersley(i, SAMPLE_COUNT);
+        float2 Xi = Hammersley(i, PREFILTERED_COLOR_SAMPLE_COUNT);
         float3 H = ImportanceSampleGGX(Xi, norm, Roughness);
         float3 L = normalize(2.0 * dot(view, H) * H - view);
         float ndotl = max(dot(norm, L), 0.0);
@@ -125,17 +127,6 @@ float3 PrefilteredColor(float3 norm)
     }
     prefilteredColor = prefilteredColor / totalWeight;
     return prefilteredColor;
-}
-
-PS_INPUT cvs_main(VS_INPUT input)
-{
-    PS_INPUT output = (PS_INPUT)0;
-    output.Pos = float4(input.Pos, 1.0f);
-    output.Pos = mul(output.Pos, World);
-    output.Pos = mul(output.Pos, View);
-    output.Pos = mul(output.Pos, Projection);
-    output.Tex = input.Pos;
-    return output;
 }
 
 float4 cps_main(PS_INPUT input) : SV_TARGET
@@ -166,10 +157,9 @@ float2 IntegrateBRDF(float NdotV, float roughness)
     float A = 0.0;
     float B = 0.0;
     float3 N = float3(0.0, 1.0, 0.0);
-    static const uint SAMPLE_COUNT = 1024u;
-    for (uint i = 0u; i < SAMPLE_COUNT; ++i)
+    for (uint i = 0u; i < PREINTEGRATED_BRDF_SAMPLE_COUNT; ++i)
     {
-        float2 Xi = Hammersley(i, SAMPLE_COUNT);
+        float2 Xi = Hammersley(i, PREINTEGRATED_BRDF_SAMPLE_COUNT);
         float3 H = ImportanceSampleGGX(Xi, N, roughness);
 
         float3 L = normalize(2.0 * dot(V, H) * H - V);
@@ -185,20 +175,9 @@ float2 IntegrateBRDF(float NdotV, float roughness)
             B += Fc * G_Vis;
         }
     }
-    A /= float(SAMPLE_COUNT);
-    B /= float(SAMPLE_COUNT);
+    A /= float(PREINTEGRATED_BRDF_SAMPLE_COUNT);
+    B /= float(PREINTEGRATED_BRDF_SAMPLE_COUNT);
     return float2(A, B);
-}
-
-PS_INPUT brdfvs_main(VS_INPUT input)
-{
-    PS_INPUT output = (PS_INPUT) 0;
-    output.Pos = float4(input.Pos, 1.0f);
-    output.Pos = mul(output.Pos, World);
-    output.Pos = mul(output.Pos, View);
-    output.Pos = mul(output.Pos, Projection);
-    output.Tex = input.Pos;
-    return output;
 }
 
 float4 brdfps_main(PS_INPUT input) : SV_TARGET

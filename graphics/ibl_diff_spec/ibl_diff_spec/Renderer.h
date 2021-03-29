@@ -46,7 +46,7 @@ private:
     std::shared_ptr<Settings>             m_pSettings;
 
     Microsoft::WRL::ComPtr<ID3D11InputLayout>        m_pInputLayout;
-    Microsoft::WRL::ComPtr<ID3D11InputLayout>        m_pIrradianceInputLayout;
+    Microsoft::WRL::ComPtr<ID3D11InputLayout>        m_pIBLInputLayout;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pVertexBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pEnvironmentVertexBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pIndexBuffer;
@@ -60,11 +60,9 @@ private:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pPrefilteredColorShaderResourceView;
     Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pPreintegratedBRDFTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pPreintegratedBRDFShaderResourceView;
-    Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pVertexShader;
+    Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pPBRVertexShader;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pEnvironmentVertexShader;
-    Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pIrradianceVertexShader;
-    Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pPrefilteredColorVertexShader;
-    Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pPreintegratedBRDFVertexShader;
+    Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pIBLVertexShader;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pEnvironmentCubeVertexShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pNDPixelShader;

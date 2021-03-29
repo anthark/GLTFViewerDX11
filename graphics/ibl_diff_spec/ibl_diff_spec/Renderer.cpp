@@ -14,7 +14,9 @@
 
 const float sphereRadius = 0.5f;
 const UINT cubeSize = 512;
-const UINT mapSize = 32;
+const UINT irradianceSize = 32;
+const UINT prefilteredColorSize = 128;
+const UINT preintegratedBRDFSize = 128;
 
 Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources, const std::shared_ptr<Camera>& camera, const std::shared_ptr<Settings>& settings) :
     m_pDeviceResources(deviceResources),
@@ -60,7 +62,7 @@ HRESULT Renderer::CreateShaders()
         return hr;
 
     // Create the vertex shader
-    hr = CreateVertexShader(device, L"PBRVertexShader.cso", bytes, &m_pVertexShader);
+    hr = CreateVertexShader(device, L"PBRVertexShader.cso", bytes, &m_pPBRVertexShader);
     if (FAILED(hr))
         return hr;
 
@@ -85,16 +87,11 @@ HRESULT Renderer::CreateShaders()
         return hr;
 
     // Create the vertex shader for irradiance
-    hr = CreateVertexShader(device, L"IrradianceVertexShader.cso", bytes, &m_pIrradianceVertexShader);
+    hr = CreateVertexShader(device, L"IBLVertexShader.cso", bytes, &m_pIBLVertexShader);
     if (FAILED(hr))
         return hr;
 
-    // Create the vertex shader for irradiance
-    hr = CreateVertexShader(device, L"PrefilteredColorVertexShader.cso", bytes, &m_pPrefilteredColorVertexShader);
-    if (FAILED(hr))
-        return hr;
-
-    // Define the input layout for irradiance
+    // Define the input layout for IBL
     D3D11_INPUT_ELEMENT_DESC irradianceLayout[] =
     {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
@@ -102,7 +99,7 @@ HRESULT Renderer::CreateShaders()
     numElements = ARRAYSIZE(irradianceLayout);
 
     // Create the input layout
-    hr = m_pDeviceResources->GetDevice()->CreateInputLayout(irradianceLayout, numElements, bytes.data(), bytes.size(), &m_pIrradianceInputLayout);
+    hr = m_pDeviceResources->GetDevice()->CreateInputLayout(irradianceLayout, numElements, bytes.data(), bytes.size(), &m_pIBLInputLayout);
     if (FAILED(hr))
         return hr;
 
@@ -121,18 +118,13 @@ HRESULT Renderer::CreateShaders()
     if (FAILED(hr))
         return hr;
 
-    // Create the pixel shader for irradiance
+    // Create the pixel shader for prefiltered color
     hr = CreatePixelShader(device, L"PrefilteredColorPixelShader.cso", bytes, &m_pPrefilteredColorPixelShader);
     if (FAILED(hr))
         return hr;
 
     // Create the pixel shader for preintegrated BRDF
     hr = CreatePixelShader(device, L"PreintegratedBRDFPixelShader.cso", bytes, &m_pPreintegratedBRDFPixelShader);
-    if (FAILED(hr))
-        return hr;
-
-    // Create the vertex shader for preintegrated BRDF
-    hr = CreateVertexShader(device, L"PreintegratedBRDFVertexShader.cso", bytes, &m_pPreintegratedBRDFVertexShader);
     if (FAILED(hr))
         return hr;
 
@@ -342,7 +334,7 @@ HRESULT Renderer::CreateCubeTextureFromResource(UINT size, ID3D11Texture2D* dst,
 
     // Set primitive topology
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    context->IASetInputLayout(m_pIrradianceInputLayout.Get());
+    context->IASetInputLayout(m_pIBLInputLayout.Get());
 
     // Render irradiance 
     context->VSSetShader(vs, nullptr, 0);
@@ -416,14 +408,14 @@ HRESULT Renderer::CreateIrradianceTexture()
 {
     HRESULT hr = S_OK;
 
-    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32G32B32A32_FLOAT, mapSize, mapSize, 6, 1, D3D11_BIND_SHADER_RESOURCE,
+    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32G32B32A32_FLOAT, irradianceSize, irradianceSize, 6, 1, D3D11_BIND_SHADER_RESOURCE,
         D3D11_USAGE_DEFAULT, 0, 1, 0, D3D11_RESOURCE_MISC_TEXTURECUBE);
     hr = m_pDeviceResources->GetDevice()->CreateTexture2D(&td, nullptr, &m_pIrradianceTexture);
     if (FAILED(hr))
         return hr;
 
-    hr = CreateCubeTextureFromResource(mapSize, m_pIrradianceTexture.Get(), m_pEnvironmentCubeShaderResourceView.Get(),
-        m_pIrradianceVertexShader.Get(), m_pIrradiancePixelShader.Get());
+    hr = CreateCubeTextureFromResource(irradianceSize, m_pIrradianceTexture.Get(), m_pEnvironmentCubeShaderResourceView.Get(),
+        m_pIBLVertexShader.Get(), m_pIrradiancePixelShader.Get());
     if (FAILED(hr))
         return hr;
 
@@ -437,7 +429,7 @@ HRESULT Renderer::CreatePrefilteredColorTexture()
 {
     HRESULT hr = S_OK;
 
-    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32G32B32A32_FLOAT, 128, 128, 6, 5, D3D11_BIND_SHADER_RESOURCE,
+    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32G32B32A32_FLOAT, prefilteredColorSize, prefilteredColorSize, 6, 5, D3D11_BIND_SHADER_RESOURCE,
         D3D11_USAGE_DEFAULT, 0, 1, 0, D3D11_RESOURCE_MISC_TEXTURECUBE);
     hr = m_pDeviceResources->GetDevice()->CreateTexture2D(&td, nullptr, &m_pPrefilteredColorTexture);
     if (FAILED(hr))
@@ -450,8 +442,8 @@ HRESULT Renderer::CreatePrefilteredColorTexture()
         m_materialBufferData.Roughness = 0.25f * i;
         context->UpdateSubresource(m_pMaterialBuffer.Get(), 0, nullptr, &m_materialBufferData, 0, 0);
 
-        hr = CreateCubeTextureFromResource(128 / (UINT)pow(2, i), m_pPrefilteredColorTexture.Get(), m_pEnvironmentCubeShaderResourceView.Get(),
-            m_pPrefilteredColorVertexShader.Get(), m_pPrefilteredColorPixelShader.Get(), i);
+        hr = CreateCubeTextureFromResource(prefilteredColorSize / (UINT)pow(2, i), m_pPrefilteredColorTexture.Get(), m_pEnvironmentCubeShaderResourceView.Get(),
+            m_pIBLVertexShader.Get(), m_pPrefilteredColorPixelShader.Get(), i);
         if (FAILED(hr))
             return hr;
     }
@@ -498,7 +490,7 @@ HRESULT Renderer::CreatePreintegratedBRDFTexture()
     if (FAILED(hr))
         return hr;
 
-    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32G32B32A32_FLOAT, 128, 128, 1, 1, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET);
+    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32G32B32A32_FLOAT, preintegratedBRDFSize, preintegratedBRDFSize, 1, 1, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET);
     hr = device->CreateTexture2D(&td, nullptr, &m_pPreintegratedBRDFTexture);
     if (FAILED(hr))
         return hr;
@@ -511,8 +503,8 @@ HRESULT Renderer::CreatePreintegratedBRDFTexture()
         return hr;
 
     D3D11_VIEWPORT viewport;
-    viewport.Width = static_cast<FLOAT>(128);
-    viewport.Height = static_cast<FLOAT>(128);
+    viewport.Width = static_cast<FLOAT>(preintegratedBRDFSize);
+    viewport.Height = static_cast<FLOAT>(preintegratedBRDFSize);
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
     viewport.TopLeftX = 0;
@@ -532,9 +524,9 @@ HRESULT Renderer::CreatePreintegratedBRDFTexture()
     context->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
 
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    context->IASetInputLayout(m_pIrradianceInputLayout.Get());
+    context->IASetInputLayout(m_pIBLInputLayout.Get());
 
-    context->VSSetShader(m_pPreintegratedBRDFVertexShader.Get(), nullptr, 0);
+    context->VSSetShader(m_pIBLVertexShader.Get(), nullptr, 0);
     context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
     context->PSSetShader(m_pPreintegratedBRDFPixelShader.Get(), nullptr, 0);
 
@@ -722,6 +714,9 @@ void Renderer::Update()
 
     for (UINT i = 0; i < NUM_LIGHTS; ++i)
         m_lightColorBufferData.LightColor[i].w = m_pSettings->GetLightStrength(i);
+
+    m_materialBufferData.MetalF0 = m_pSettings->GetMetalF0();
+    m_materialBufferData.Albedo = m_pSettings->GetAlbedo();
 }
 
 void Renderer::Clear()
@@ -755,7 +750,7 @@ void Renderer::RenderInTexture()
     context->IASetInputLayout(m_pInputLayout.Get());
 
     // Render spheres
-    context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
+    context->VSSetShader(m_pPBRVertexShader.Get(), nullptr, 0);
     context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
     context->PSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
     context->PSSetConstantBuffers(1, 1, m_pLightPositionBuffer.GetAddressOf());
@@ -788,7 +783,6 @@ void Renderer::RenderInTexture()
 
     const int sphereGridSize = 10;
     const float gridWidth = 5;
-    m_materialBufferData.Albedo = DirectX::XMFLOAT3(0.0f, 0.0f, 1.0f);
     for (int i = 0; i < sphereGridSize; i++)
     {
         for (int j = 0; j < sphereGridSize; j++)
