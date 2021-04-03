@@ -387,8 +387,8 @@ HRESULT Renderer::CreateCubeTexture()
 {
     HRESULT hr = S_OK;
 
-    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32G32B32A32_FLOAT, cubeSize, cubeSize, 6, 1, D3D11_BIND_SHADER_RESOURCE,
-        D3D11_USAGE_DEFAULT, 0, 1, 0, D3D11_RESOURCE_MISC_TEXTURECUBE);
+    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32G32B32A32_FLOAT, cubeSize, cubeSize, 6, 0, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET,
+        D3D11_USAGE_DEFAULT, 0, 1, 0, D3D11_RESOURCE_MISC_TEXTURECUBE | D3D11_RESOURCE_MISC_GENERATE_MIPS);
     hr = m_pDeviceResources->GetDevice()->CreateTexture2D(&td, nullptr, &m_pEnvironmentCubeTexture);
     if (FAILED(hr))
         return hr;
@@ -398,9 +398,12 @@ HRESULT Renderer::CreateCubeTexture()
     if (FAILED(hr))
         return hr;
 
-    D3D11_SHADER_RESOURCE_VIEW_DESC srvd = CD3D11_SHADER_RESOURCE_VIEW_DESC(D3D11_SRV_DIMENSION_TEXTURECUBE, td.Format, 0, 1);
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvd = CD3D11_SHADER_RESOURCE_VIEW_DESC(D3D11_SRV_DIMENSION_TEXTURECUBE, td.Format);
     hr = m_pDeviceResources->GetDevice()->CreateShaderResourceView(m_pEnvironmentCubeTexture.Get(), &srvd, &m_pEnvironmentCubeShaderResourceView);
+    if (FAILED(hr))
+        return hr;
 
+    m_pDeviceResources->GetDeviceContext()->GenerateMips(m_pEnvironmentCubeShaderResourceView.Get());
     return hr;
 }
 

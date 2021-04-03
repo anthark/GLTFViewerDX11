@@ -7,6 +7,7 @@ static const int N1 = 200;
 static const int N2 = 50;
 static const uint PREFILTERED_COLOR_SAMPLE_COUNT = 1024u;
 static const uint PREINTEGRATED_BRDF_SAMPLE_COUNT = 1024u;
+static const uint RESOLUTION = 512u;
 
 cbuffer Transformation : register(b0)
 {
@@ -108,6 +109,12 @@ float3 ImportanceSampleGGX(float2 Xi, float3 norm, float roughness)
     return normalize(sampleVec);
 }
 
+float DistributionGGX(float3 n, float3 h, float roughness)
+{
+    float roughnessSqr = pow(max(roughness, 0.01f), 2);
+    return roughnessSqr / (PI * pow(pow(max(dot(n, h), 0), 2) * (roughnessSqr - 1) + 1, 2));
+}
+
 float3 PrefilteredColor(float3 norm)
 {
     float3 view = norm;
@@ -119,9 +126,16 @@ float3 PrefilteredColor(float3 norm)
         float3 H = ImportanceSampleGGX(Xi, norm, Roughness);
         float3 L = normalize(2.0 * dot(view, H) * H - view);
         float ndotl = max(dot(norm, L), 0.0);
+        float ndoth = max(dot(norm, H), 0.0);
+        float hdotv = max(dot(H, view), 0.0);
+        float D = DistributionGGX(norm, H, Roughness);
+        float pdf = (D * ndoth / (4.0 * hdotv)) + 0.0001;
+        float saTexel = 4.0 * PI / (6.0 * RESOLUTION * RESOLUTION);
+        float saSample = 1.0 / (float(PREFILTERED_COLOR_SAMPLE_COUNT) * pdf + 0.0001);
+        float mipLevel = Roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel);
         if (ndotl > 0.0)
         {
-            prefilteredColor += cubeTexture.Sample(MinMagMipLinear, L).xyz * ndotl;
+            prefilteredColor += cubeTexture.SampleLevel(MinMagMipLinear, L, mipLevel).xyz * ndotl;
             totalWeight += ndotl;
         }
     }
