@@ -62,7 +62,7 @@ float3 Irradiance(float3 normal)
             float theta = j * (PI / 2 / N2);
             float3 tangentSample = float3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
             float3 sampleVec = tangentSample.x * tangent + tangentSample.y * bitangent + tangentSample.z * normal;
-            irradiance += cubeTexture.Sample(MinMagMipLinear, sampleVec).xyz * cos(theta) * sin(theta);
+            irradiance += cubeTexture.SampleLevel(MinMagMipLinear, sampleVec, 0).xyz * cos(theta) * sin(theta);
         }
     }
     irradiance = PI * irradiance / (N1 * N2);
