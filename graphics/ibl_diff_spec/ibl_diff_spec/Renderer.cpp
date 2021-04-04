@@ -262,8 +262,8 @@ HRESULT Renderer::CreateTexture()
         return hr;
 
     sd.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-    sd.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
-    sd.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+    sd.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sd.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
     hr = device->CreateSamplerState(&sd, &m_pSamplerStates[1]);
 
     return hr;

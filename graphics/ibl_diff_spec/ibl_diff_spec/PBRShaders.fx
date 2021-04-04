@@ -5,7 +5,7 @@ TextureCube prefilteredColorTexture : register(t1);
 Texture2D<float4> preintegratedBRDFTexture : register(t2);
 
 SamplerState MinMagMipLinear : register(s0);
-SamplerState MinMagLinearMipPointBorder : register(s1);
+SamplerState MinMagLinearMipPointClamp : register(s1);
 
 static const float PI = 3.14159265358979323846f;
 static const float MAX_REFLECTION_LOD = 4.0;
@@ -140,7 +140,7 @@ float3 Ambient(float3 n, float3 v)
     float3 prefilteredColor = prefilteredColorTexture.SampleLevel(MinMagMipLinear, r, Roughness * MAX_REFLECTION_LOD).xyz;
     float3 F0 = lerp(float3(0.04, 0.04, 0.04), MetalF0, Metalness);
     float3 F = FresnelSchlickRoughnessFunction(F0, n, v, Roughness);
-    float2 envBRDF = preintegratedBRDFTexture.Sample(MinMagLinearMipPointBorder, float2(max(dot(n, v), 0.0), Roughness)).xy;
+    float2 envBRDF = preintegratedBRDFTexture.Sample(MinMagLinearMipPointClamp, float2(max(dot(n, v), 0.0), Roughness)).xy;
     float3 specular = prefilteredColor * (F0 * envBRDF.x + envBRDF.y);
 
     float3 irradiance = irradianceTexture.Sample(MinMagMipLinear, n).xyz;
