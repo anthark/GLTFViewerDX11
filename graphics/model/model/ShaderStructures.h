@@ -12,9 +12,9 @@ struct WorldViewProjectionConstantBuffer
 
 struct VertexData
 {
+	DirectX::XMFLOAT3 Normal;
 	DirectX::XMFLOAT3 Pos;
 	DirectX::XMFLOAT2 Tex;
-	DirectX::XMFLOAT3 Normal;
 };
 
 struct VertexPosData
@@ -41,8 +41,7 @@ struct LuminanceConstantBuffer
 __declspec(align(16))
 struct MaterialConstantBuffer
 {
-	DirectX::XMFLOAT3 Albedo;
+	DirectX::XMFLOAT4 Albedo;
 	float Roughness;
 	float Metalness;
-	DirectX::XMFLOAT3 MetalF0;
 };

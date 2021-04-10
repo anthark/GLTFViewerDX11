@@ -150,6 +150,17 @@ HRESULT DeviceResources::ConfigureBackBuffer()
     if (FAILED(hr))
         return hr;
 
+    // Create the depth stencil for transparent objects
+    D3D11_DEPTH_STENCIL_DESC dsd;
+    ZeroMemory(&dsd, sizeof(dsd));
+    dsd.DepthEnable = TRUE;
+    dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+    dsd.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+    dsd.StencilEnable = FALSE;
+    hr = m_pd3dDevice->CreateDepthStencilState(&dsd, &m_pTransDepthStencilState);
+    if (FAILED(hr))
+        return hr;
+
     // Setup the viewport
     m_viewport.Width = static_cast<FLOAT>(m_backBufferDesc.Width);
     m_viewport.Height = static_cast<FLOAT>(m_backBufferDesc.Height);

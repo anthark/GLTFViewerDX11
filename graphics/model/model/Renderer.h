@@ -6,6 +6,7 @@
 #include "ToneMapPostProcess.h"
 #include "Camera.h"
 #include "Settings.h"
+#include "Model.h"
 
 class Renderer
 {
@@ -35,7 +36,8 @@ private:
     void UpdatePerspective();
 
     void Clear();
-    void RenderInTexture();
+    void RenderSpheres();
+    void RenderModel();
     void RenderEnvironment();
     void PostProcessTexture();
 
@@ -79,6 +81,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pMaterialBuffer;
 
     std::vector<Microsoft::WRL::ComPtr<ID3D11SamplerState>> m_pSamplerStates;
+
+    std::unique_ptr<Model> m_pModel;
 
     WorldViewProjectionConstantBuffer m_constantBufferData;
     LightPositionConstantBuffer       m_lightPositionBufferData;

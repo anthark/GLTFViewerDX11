@@ -7,7 +7,6 @@
 Settings::Settings(const std::shared_ptr<DeviceResources>& deviceResources) :
     m_pDeviceResources(deviceResources),
     m_shaderMode(PBRShaderMode::REGULAR),
-    m_metalType(MetalType::ALUMINIUM),
     m_strengths()
 {};
 
@@ -34,13 +33,13 @@ void Settings::Render()
     static const char* shaderModes[] = { "Regular", "Normal distribution", "Geometry", "Fresnel" };
     ImGui::Combo("Shader mode", reinterpret_cast<int*>(&m_shaderMode), shaderModes, IM_ARRAYSIZE(shaderModes));
 
-    static const char* metalTypes[] = { "Aluminium", "Argentum", "Aurum", "Cuprum", "Ferrum" };
-    ImGui::Combo("Metal type", reinterpret_cast<int*>(&m_metalType), metalTypes, IM_ARRAYSIZE(metalTypes));
+    static const char* sceneModes[] = { "Model", "Spheres" };
+    ImGui::Combo("Scene content", reinterpret_cast<int*>(&m_sceneMode), sceneModes, IM_ARRAYSIZE(sceneModes));
 
     ImGui::ColorEdit3("Albedo", m_albedo);
 
     for (size_t i = 0; i < NUM_LIGHTS; ++i)
-        ImGui::SliderFloat((std::string("Strength of ") + std::to_string(i) + std::string(" light")).c_str(), m_strengths + i, 0.0f, 1000.0f);
+        ImGui::SliderFloat((std::string("Strength of ") + std::to_string(i) + std::string(" light")).c_str(), m_strengths + i, 0.0f, 500.0f);
 
     ImGui::End();
 

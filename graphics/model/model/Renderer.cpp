@@ -7,9 +7,7 @@
 
 #include "Renderer.h"
 #include "Utils.h"
-//#include "renderdoc_app.h"
 
-#define STB_IMAGE_IMPLEMENTATION
 #include "../../stb_image.h"
 
 const float sphereRadius = 0.5f;
@@ -45,9 +43,9 @@ HRESULT Renderer::CreateShaders()
     // Define the input layout
     D3D11_INPUT_ELEMENT_DESC layout[] =
     {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD_", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
     };
     UINT numElements = ARRAYSIZE(layout);
 
@@ -548,11 +546,9 @@ HRESULT Renderer::CreatePreintegratedBRDFTexture()
 void Renderer::UpdatePerspective()
 {
     m_constantBufferData.Projection = DirectX::XMMatrixTranspose(
-        DirectX::XMMatrixPerspectiveFovRH(DirectX::XM_PIDIV2, m_pDeviceResources->GetAspectRatio(), 0.01f, 1000.0f)
+        DirectX::XMMatrixPerspectiveFovRH(DirectX::XM_PIDIV2, m_pDeviceResources->GetAspectRatio(), 0.1f, 10000.0f)
     );
 }
-
-// RENDERDOC_API_1_4_1* g_pRDApi = nullptr;
 
 HRESULT Renderer::CreateDeviceDependentResources()
 {
@@ -577,30 +573,7 @@ HRESULT Renderer::CreateDeviceDependentResources()
     hr = CreateLights();
     if (FAILED(hr))
         return hr;
-    /*
-    HMODULE rdHandle = LoadLibrary(L"renderdoc.dll");
-    if (rdHandle != nullptr)
-    {
-       // For debugging of the next part of code
-       while (!::IsDebuggerPresent())
-       {
-          Sleep(1);
-       }
 
-       void* pProc = ::GetProcAddress(rdHandle, "RENDERDOC_GetAPI");
-
-       pRENDERDOC_GetAPI pRenderDocGetAPI = static_cast<pRENDERDOC_GetAPI>(pProc);
-       assert(pRenderDocGetAPI != nullptr);
-
-       int ret = pRenderDocGetAPI(eRENDERDOC_API_Version_1_4_1, (void**)&g_pRDApi);
-       assert(ret == 1);
-    }
-
-    if (g_pRDApi)
-    {
-       g_pRDApi->StartFrameCapture(nullptr, nullptr);
-    }
-    */
     hr = CreateIrradianceTexture();
     if (FAILED(hr))
        return hr;
@@ -613,17 +586,11 @@ HRESULT Renderer::CreateDeviceDependentResources()
     if (FAILED(hr))
         return hr;
 
-    /*
-    if (g_pRDApi)
-    {
-       g_pRDApi->EndFrameCapture(nullptr, nullptr);
-    }
+    m_pModel = std::unique_ptr<Model>(new Model("car_scene/scene.gltf"));
+    hr = m_pModel->CreateDeviceDependentResources(m_pDeviceResources->GetDevice());
+    if (FAILED(hr))
+        return hr;
 
-    if (rdHandle)
-    {
-       ::FreeLibrary(rdHandle);
-    }
-    */
     m_pToneMap = std::unique_ptr<ToneMapPostProcess>(new ToneMapPostProcess());
     hr = m_pToneMap->CreateDeviceDependentResources(m_pDeviceResources->GetDevice());
     
@@ -718,7 +685,6 @@ void Renderer::Update()
     for (UINT i = 0; i < NUM_LIGHTS; ++i)
         m_lightColorBufferData.LightColor[i].w = m_pSettings->GetLightStrength(i);
 
-    m_materialBufferData.MetalF0 = m_pSettings->GetMetalF0();
     m_materialBufferData.Albedo = m_pSettings->GetAlbedo();
 }
 
@@ -726,13 +692,15 @@ void Renderer::Clear()
 {
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
 
+    context->ClearState();
+
     float backgroundColour[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
     context->ClearRenderTargetView(m_pRenderTexture->GetRenderTargetView(), backgroundColour);
     context->ClearRenderTargetView(m_pDeviceResources->GetRenderTarget(), backgroundColour);
     context->ClearDepthStencilView(m_pDeviceResources->GetDepthStencil(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 }
 
-void Renderer::RenderInTexture()
+void Renderer::RenderSpheres()
 {
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
 
@@ -821,7 +789,7 @@ void Renderer::RenderEnvironment()
     context->IASetInputLayout(m_pInputLayout.Get());
 
     m_constantBufferData.World = DirectX::XMMatrixMultiplyTranspose(
-        DirectX::XMMatrixScaling(1000, 1000, 1000),
+        DirectX::XMMatrixScaling(10000, 10000, 10000),
         DirectX::XMMatrixTranslationFromVector(m_pCamera->GetPosition())
     );
     context->UpdateSubresource(m_pConstantBuffer.Get(), 0, NULL, &m_constantBufferData, 0, 0);
@@ -845,6 +813,29 @@ void Renderer::PostProcessTexture()
     m_pToneMap->Process(context, m_pRenderTexture->GetShaderResourceView(), m_pDeviceResources->GetRenderTarget(), m_pDeviceResources->GetViewPort());
 }
 
+void Renderer::RenderModel()
+{
+    ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
+
+    context->UpdateSubresource(m_pLightPositionBuffer.Get(), 0, nullptr, &m_lightPositionBufferData, 0, 0);
+    context->UpdateSubresource(m_pLightColorBuffer.Get(), 0, nullptr, &m_lightColorBufferData, 0, 0);
+    context->PSSetConstantBuffers(1, 1, m_pLightPositionBuffer.GetAddressOf());
+    context->PSSetConstantBuffers(2, 1, m_pLightColorBuffer.GetAddressOf());
+    context->PSSetShaderResources(0, 1, m_pIrradianceShaderResourceView.GetAddressOf());
+    context->PSSetShaderResources(1, 1, m_pPrefilteredColorShaderResourceView.GetAddressOf());
+    context->PSSetShaderResources(2, 1, m_pPreintegratedBRDFShaderResourceView.GetAddressOf());
+    context->PSSetSamplers(0, 1, m_pSamplerStates[0].GetAddressOf());
+    context->PSSetSamplers(1, 1, m_pSamplerStates[1].GetAddressOf());
+
+    Model::ShadersSlots slots = { 3, 4, 5, 2, 0, 3 };
+    m_pModel->Render(context, m_constantBufferData, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots);
+    //context->OMSetDepthStencilState(m_pDeviceResources->GetTransDepthStencil(), 0);
+    m_pModel->RenderTransparent(context, m_constantBufferData, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots);
+
+    ID3D11ShaderResourceView* nullsrv[] = { nullptr };
+    context->PSSetShaderResources(0, 1, nullsrv);
+}
+
 void Renderer::Render()
 {
     Clear();
@@ -861,7 +852,11 @@ void Renderer::Render()
         context->OMSetRenderTargets(1, &renderTarget, m_pDeviceResources->GetDepthStencil());
         
         RenderEnvironment();
-        RenderInTexture();
+        if (m_pSettings->GetSceneMode() == Settings::SceneMode::MODEL)
+            RenderModel();
+        else
+            RenderSpheres();
+        
         PostProcessTexture();
     }
     else
@@ -869,7 +864,7 @@ void Renderer::Render()
         renderTarget = m_pDeviceResources->GetRenderTarget();
         context->OMSetRenderTargets(1, &renderTarget, m_pDeviceResources->GetDepthStencil());
         
-        RenderInTexture();
+        RenderSpheres();
     }
 }
 

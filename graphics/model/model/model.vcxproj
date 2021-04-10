@@ -142,6 +142,7 @@
     <ClCompile Include="DeviceResources.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="App.cpp" />
+    <ClCompile Include="Model.cpp" />
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="RenderTexture.cpp" />
     <ClCompile Include="Renderer.cpp" />
@@ -428,10 +429,14 @@
     <ClInclude Include="..\..\ImGui\imstb_rectpack.h" />
     <ClInclude Include="..\..\ImGui\imstb_textedit.h" />
     <ClInclude Include="..\..\ImGui\imstb_truetype.h" />
+    <ClInclude Include="..\..\json.hpp" />
+    <ClInclude Include="..\..\stb_image_write.h" />
+    <ClInclude Include="..\..\tiny_gltf.h" />
     <ClInclude Include="AverageLuminanceProcess.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="DeviceResources.h" />
     <ClInclude Include="App.h" />
+    <ClInclude Include="Model.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="RenderTexture.h" />

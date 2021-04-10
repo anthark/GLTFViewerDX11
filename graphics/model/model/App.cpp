@@ -40,7 +40,7 @@ HRESULT App::CreateDesktopWindow(HINSTANCE hInstance, int nCmdShow, WNDPROC pWnd
 
 LRESULT App::KeyHandler(WPARAM wParam, LPARAM lParam)
 {
-    float cameraSpeed = 0.1f;
+    float cameraSpeed = 7.0f;
 
     switch (wParam)
     {
