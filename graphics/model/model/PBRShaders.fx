@@ -57,7 +57,7 @@ struct PS_INPUT
     float3 Normal : NORMAL;
 	float4 WorldPos : POSITION;
 #ifdef HAS_TANGENT
-    float4 Tangent : TANGENT;
+    float3 Tangent : TANGENT;
 #endif
 };
 
@@ -71,7 +71,7 @@ PS_INPUT vs_main(VS_INPUT input)
     output.Tex = input.Tex;
     output.Normal = normalize(mul(input.Normal, (float3x3)World));
 #ifdef HAS_TANGENT
-    output.Tangent = normalize(mul(input.Tangent, World));
+    output.Tangent = normalize(mul(input.Tangent, World).xyz);
 #endif
     return output;
 }
@@ -188,10 +188,10 @@ float4 ps_main(PS_INPUT input) : SV_TARGET
     float3 n = normalize(input.Normal);
 
 #ifdef HAS_NORMAL_TEXTURE
-    float3 scaledNormal = normalize(normalTexture.Sample(ModelSampler, input.Tex).xyz * 2.0 - 1.0);
-    float3 tangent = normalize(input.Tangent.xyz);
+    float3 nm = (normalTexture.Sample(ModelSampler, input.Tex) * 2.0f - 1.0f).xyz;
+    float3 tangent = normalize(input.Tangent);
     float3 binormal = cross(n, tangent);
-    n = scaledNormal.x * tangent + scaledNormal.y * binormal + n;
+    n = normalize(nm.x * tangent + nm.y * binormal + input.Normal);
 #endif
 
 #ifdef DOUBLE_SIDED
