@@ -22,6 +22,15 @@ public:
         UINT materialConstantBufferSlot;
     };
 
+    enum MODEL_PIXEL_SHADER_DEFINES
+    {
+        MATERIAL_HAS_COLOR_TEXTURE = 0x1,
+        MATERIAL_HAS_METAL_ROUGH_TEXTURE = 0x2,
+        MATERIAL_HAS_NORMAL_TEXTURE = 0x4,
+        MATERIAL_HAS_OCCLUSION_TEXTURE = 0x8,
+        MATERIAL_DOUBLE_SIDED = 0x10
+    } MODEL_PIXEL_SHADER_DEFINES;
+
     Model(const char* modelPath);
     ~Model();
 
@@ -41,9 +50,7 @@ private:
         int baseColorTexture;
         int metallicRoughnessTexture;
         int normalTexture;
-        Microsoft::WRL::ComPtr<ID3D11InputLayout> pInputLayout;
-        Microsoft::WRL::ComPtr<ID3D11VertexShader> pVertexShader;
-        Microsoft::WRL::ComPtr<ID3D11PixelShader> pPixelShader;
+        UINT pixelShaderDefinesFlags;
     };
 
     struct Attribute
@@ -72,12 +79,17 @@ private:
     HRESULT CreatePrimitives(ID3D11Device* device, tinygltf::Model& model);
     HRESULT ProcessNode(ID3D11Device* device, tinygltf::Model& model, int node, DirectX::XMMATRIX worldMatrix);
     HRESULT CreatePrimitive(ID3D11Device* device, tinygltf::Model& model, tinygltf::Primitive& gltfPrimitive, UINT matrix);
-    HRESULT CreateShaders(ID3D11Device* device, D3D_SHADER_MACRO* defines, ID3D11VertexShader** vs, ID3D11PixelShader** ps, ID3D11InputLayout** il);
+    HRESULT CreateVertexShader(ID3D11Device* device);
+    HRESULT CreatePixelShader(ID3D11Device* device, UINT definesFlags);
     
     void RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer& transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots& slots);
 
     std::string m_modelPath;
 
+    Microsoft::WRL::ComPtr<ID3D11InputLayout>  m_pInputLayout;
+    Microsoft::WRL::ComPtr<ID3D11VertexShader> m_pVertexShader;
+
+    std::vector<Microsoft::WRL::ComPtr<ID3D11PixelShader>>        m_pPixelShaders;
     std::vector<Microsoft::WRL::ComPtr<ID3D11Texture2D>>          m_pTextures;
     std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> m_pShaderResourceViews;
     

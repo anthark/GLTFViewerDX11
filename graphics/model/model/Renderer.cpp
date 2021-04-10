@@ -735,16 +735,16 @@ void Renderer::RenderSpheres()
 
     switch (m_pSettings->GetShaderMode())
     {
-    case Settings::PBRShaderMode::REGULAR:
+    case Settings::SETTINGS_PBR_SHADER_MODE::REGULAR:
         context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
         break;
-    case Settings::PBRShaderMode::NORMAL_DISTRIBUTION:
+    case Settings::SETTINGS_PBR_SHADER_MODE::NORMAL_DISTRIBUTION:
         context->PSSetShader(m_pNDPixelShader.Get(), nullptr, 0);
         break;
-    case Settings::PBRShaderMode::GEOMETRY:
+    case Settings::SETTINGS_PBR_SHADER_MODE::GEOMETRY:
         context->PSSetShader(m_pGPixelShader.Get(), nullptr, 0);
         break;
-    case Settings::PBRShaderMode::FRESNEL:
+    case Settings::SETTINGS_PBR_SHADER_MODE::FRESNEL:
         context->PSSetShader(m_pFPixelShader.Get(), nullptr, 0);
         break;
     default:
@@ -846,13 +846,13 @@ void Renderer::Render()
     D3D11_VIEWPORT viewport = m_pRenderTexture->GetViewPort();
     context->RSSetViewports(1, &viewport);
 
-    if (m_pSettings->GetShaderMode() == Settings::PBRShaderMode::REGULAR)
+    if (m_pSettings->GetShaderMode() == Settings::SETTINGS_PBR_SHADER_MODE::REGULAR)
     {
         renderTarget = m_pRenderTexture->GetRenderTargetView();
         context->OMSetRenderTargets(1, &renderTarget, m_pDeviceResources->GetDepthStencil());
         
         RenderEnvironment();
-        if (m_pSettings->GetSceneMode() == Settings::SceneMode::MODEL)
+        if (m_pSettings->GetSceneMode() == Settings::SETTINGS_SCENE_MODE::MODEL)
             RenderModel();
         else
             RenderSpheres();

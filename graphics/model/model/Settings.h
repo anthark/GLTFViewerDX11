@@ -7,7 +7,7 @@
 class Settings
 {
 public:
-    enum class PBRShaderMode
+    enum class SETTINGS_PBR_SHADER_MODE
     {
         REGULAR = 0,
         NORMAL_DISTRIBUTION,
@@ -15,7 +15,7 @@ public:
         FRESNEL
     };
 
-    enum class SceneMode
+    enum class SETTINGS_SCENE_MODE
     {
         MODEL = 0,
         SPHERES
@@ -26,8 +26,8 @@ public:
 
     void CreateResources(HWND hWnd);
 
-    PBRShaderMode GetShaderMode() const { return m_shaderMode; };
-    SceneMode GetSceneMode() const { return m_sceneMode; };
+    SETTINGS_PBR_SHADER_MODE GetShaderMode() const { return m_shaderMode; };
+    SETTINGS_SCENE_MODE GetSceneMode() const { return m_sceneMode; };
     float GetLightStrength(UINT index) const;
 
     DirectX::XMFLOAT4 GetAlbedo() const { return DirectX::XMFLOAT4(m_albedo); };
@@ -37,8 +37,8 @@ public:
 private:
     std::shared_ptr<DeviceResources> m_pDeviceResources;
 
-    PBRShaderMode m_shaderMode;
-    SceneMode     m_sceneMode;
+    SETTINGS_PBR_SHADER_MODE m_shaderMode;
+    SETTINGS_SCENE_MODE      m_sceneMode;
 
     float m_strengths[NUM_LIGHTS];
     float m_albedo[4] = { 0.25f, 1.0f, 1.0f, 1.0f };

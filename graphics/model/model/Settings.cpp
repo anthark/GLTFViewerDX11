@@ -6,7 +6,8 @@
 
 Settings::Settings(const std::shared_ptr<DeviceResources>& deviceResources) :
     m_pDeviceResources(deviceResources),
-    m_shaderMode(PBRShaderMode::REGULAR),
+    m_shaderMode(SETTINGS_PBR_SHADER_MODE::REGULAR),
+    m_sceneMode(SETTINGS_SCENE_MODE::MODEL),
     m_strengths()
 {};
 

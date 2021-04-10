@@ -26,6 +26,12 @@ HRESULT Model::CreateDeviceDependentResources(ID3D11Device* device)
     if (!ret)
         return E_FAIL;
 
+    hr = CreateVertexShader(device);
+    if (FAILED(hr))
+        return hr;
+
+    m_pPixelShaders.resize(32);
+
     hr = CreateTextures(device, model);
     if (FAILED(hr))
         return hr;
@@ -198,30 +204,27 @@ HRESULT Model::CreateMaterials(ID3D11Device* device, tinygltf::Model& model)
         material.materialBufferData.Metalness = static_cast<float>(gltfMaterial.pbrMetallicRoughness.metallicFactor);
         material.materialBufferData.Roughness = static_cast<float>(gltfMaterial.pbrMetallicRoughness.roughnessFactor);
 
-        std::vector<D3D_SHADER_MACRO> defines;
-        defines.push_back({ "HAS_TANGENT", "1" });
+        material.pixelShaderDefinesFlags = 0;
 
         material.baseColorTexture = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
         if (material.baseColorTexture >= 0)
-            defines.push_back({ "HAS_COLOR_TEXTURE", "1" });
+            material.pixelShaderDefinesFlags |= MATERIAL_HAS_COLOR_TEXTURE;
 
         material.metallicRoughnessTexture = gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
         if (material.metallicRoughnessTexture >= 0)
-            defines.push_back({ "HAS_METAL_ROUGH_TEXTURE", "1" });
+            material.pixelShaderDefinesFlags |= MATERIAL_HAS_METAL_ROUGH_TEXTURE;
 
         material.normalTexture = gltfMaterial.normalTexture.index;
         if (material.normalTexture >= 0)
-            defines.push_back({ "HAS_NORMAL_TEXTURE", "1" });
+            material.pixelShaderDefinesFlags |= MATERIAL_HAS_NORMAL_TEXTURE;
 
         if (gltfMaterial.occlusionTexture.index >= 0)
-            defines.push_back({ "HAS_OCCLUSION_TEXTURE", "1" });
+            material.pixelShaderDefinesFlags |= MATERIAL_HAS_OCCLUSION_TEXTURE;
 
         if (gltfMaterial.doubleSided)
-            defines.push_back({ "DOUBLE_SIDED", "1" });
+            material.pixelShaderDefinesFlags |= MATERIAL_DOUBLE_SIDED;
 
-        defines.push_back({ nullptr, nullptr });
-
-        hr = CreateShaders(device, defines.data(), &material.pVertexShader, &material.pPixelShader, &material.pInputLayout);
+        hr = CreatePixelShader(device, material.pixelShaderDefinesFlags);
         if (FAILED(hr))
             return hr;
 
@@ -411,21 +414,25 @@ HRESULT Model::CreatePrimitives(ID3D11Device* device, tinygltf::Model& model)
     return hr;
 }
 
-HRESULT Model::CreateShaders(ID3D11Device* device, D3D_SHADER_MACRO* defines, ID3D11VertexShader** vs, ID3D11PixelShader** ps, ID3D11InputLayout** il)
+HRESULT Model::CreateVertexShader(ID3D11Device* device)
 {
     HRESULT hr = S_OK;
 
     Microsoft::WRL::ComPtr<ID3DBlob> blob;
+    
+    std::vector<D3D_SHADER_MACRO> defines;
+    defines.push_back({ "HAS_TANGENT", "1" });
+    defines.push_back({ nullptr, nullptr });
 
 #ifdef ENV64
-    hr = CompileShaderFromFile(L"../../model/PBRShaders.fx", "vs_main", "vs_5_0", &blob, defines);
+    hr = CompileShaderFromFile(L"../../model/PBRShaders.fx", "vs_main", "vs_5_0", &blob, defines.data());
 #else
     hr = CompileShaderFromFile(L"../model/PBRShaders.fx", "vs_main", "vs_5_0", &blob, defines);
 #endif
     if (FAILED(hr))
         return hr;
 
-    hr = device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, vs);
+    hr = device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &m_pVertexShader);
     if (FAILED(hr))
         return hr;
 
@@ -437,19 +444,48 @@ HRESULT Model::CreateShaders(ID3D11Device* device, D3D_SHADER_MACRO* defines, ID
         { "TEXCOORD_", 0, DXGI_FORMAT_R32G32_FLOAT, 3, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
     };
 
-    hr = device->CreateInputLayout(layout, ARRAYSIZE(layout), blob->GetBufferPointer(), blob->GetBufferSize(), il);
-    if (FAILED(hr))
+    hr = device->CreateInputLayout(layout, ARRAYSIZE(layout), blob->GetBufferPointer(), blob->GetBufferSize(), &m_pInputLayout);
+
+    return hr;
+}
+HRESULT Model::CreatePixelShader(ID3D11Device* device, UINT definesFlags)
+{
+    HRESULT hr = S_OK;
+
+    if (m_pPixelShaders[definesFlags])
         return hr;
 
+    Microsoft::WRL::ComPtr<ID3DBlob> blob;
+
+    std::vector<D3D_SHADER_MACRO> defines;
+    defines.push_back({ "HAS_TANGENT", "1" });
+
+    if (definesFlags & MATERIAL_HAS_COLOR_TEXTURE)
+        defines.push_back({ "HAS_COLOR_TEXTURE", "1" });
+
+    if (definesFlags & MATERIAL_HAS_METAL_ROUGH_TEXTURE)
+        defines.push_back({ "HAS_METAL_ROUGH_TEXTURE", "1" });
+
+    if (definesFlags & MATERIAL_HAS_NORMAL_TEXTURE)
+        defines.push_back({ "HAS_NORMAL_TEXTURE", "1" });
+
+    if (definesFlags & MATERIAL_HAS_OCCLUSION_TEXTURE)
+        defines.push_back({ "HAS_OCCLUSION_TEXTURE", "1" });
+
+    if (definesFlags & MATERIAL_DOUBLE_SIDED)
+        defines.push_back({ "DOUBLE_SIDED", "1" });
+
+    defines.push_back({ nullptr, nullptr });
+
 #ifdef ENV64
-    hr = CompileShaderFromFile(L"../../model/PBRShaders.fx", "ps_main", "ps_5_0", &blob, defines);
+    hr = CompileShaderFromFile(L"../../model/PBRShaders.fx", "ps_main", "ps_5_0", &blob, defines.data());
 #else
     hr = CompileShaderFromFile(L"../model/PBRShaders.fx", "ps_main", "ps_5_0", &blob, defines);
 #endif
     if (FAILED(hr))
         return hr;
 
-    hr = device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, ps);
+    hr = device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &m_pPixelShaders[definesFlags]);
 
     return hr;
 }
@@ -503,9 +539,9 @@ void Model::RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, 
         context->OMSetBlendState(material.pBlendState.Get(), nullptr, 0xFFFFFFFF);
     context->RSSetState(material.pRasterizerState.Get());
 
-    context->IASetInputLayout(material.pInputLayout.Get());
-    context->VSSetShader(material.pVertexShader.Get(), nullptr, 0);
-    context->PSSetShader(material.pPixelShader.Get(), nullptr, 0);
+    context->IASetInputLayout(m_pInputLayout.Get());
+    context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
+    context->PSSetShader(m_pPixelShaders[material.pixelShaderDefinesFlags].Get(), nullptr, 0);
 
     transformationData.World = DirectX::XMMatrixTranspose(m_worldMatricies[primitive.matrix]);
 
