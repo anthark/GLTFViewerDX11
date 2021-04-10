@@ -28,7 +28,9 @@ public:
 
     SETTINGS_PBR_SHADER_MODE GetShaderMode() const { return m_shaderMode; };
     SETTINGS_SCENE_MODE GetSceneMode() const { return m_sceneMode; };
-    float GetLightStrength(UINT index) const;
+
+    DirectX::XMFLOAT4 GetLightColor(UINT index) const;
+    DirectX::XMFLOAT4 GetLightPosition(UINT index) const;
 
     DirectX::XMFLOAT4 GetAlbedo() const { return DirectX::XMFLOAT4(m_albedo); };
 
@@ -40,6 +42,11 @@ private:
     SETTINGS_PBR_SHADER_MODE m_shaderMode;
     SETTINGS_SCENE_MODE      m_sceneMode;
 
-    float m_strengths[NUM_LIGHTS];
+    float m_lightsStrengths[NUM_LIGHTS];
+    float m_lightsThetaAngles[NUM_LIGHTS];
+    float m_lightsPhiAngles[NUM_LIGHTS];
+    float m_lightsDistances[NUM_LIGHTS];
+    float m_lightsColors[NUM_LIGHTS][3];
+    
     float m_albedo[4] = { 0.25f, 1.0f, 1.0f, 1.0f };
 };

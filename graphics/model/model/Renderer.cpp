@@ -683,7 +683,10 @@ void Renderer::Update()
     DirectX::XMStoreFloat4(&m_constantBufferData.CameraPos, m_pCamera->GetPosition());
 
     for (UINT i = 0; i < NUM_LIGHTS; ++i)
-        m_lightColorBufferData.LightColor[i].w = m_pSettings->GetLightStrength(i);
+    {
+        m_lightColorBufferData.LightColor[i] = m_pSettings->GetLightColor(i);
+        m_lightPositionBufferData.LightPosition[i] = m_pSettings->GetLightPosition(i);
+    }
 
     m_materialBufferData.Albedo = m_pSettings->GetAlbedo();
 }
