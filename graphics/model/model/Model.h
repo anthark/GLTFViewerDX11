@@ -18,7 +18,7 @@ public:
         UINT metallicRoughnessTextureSlot;
         UINT normalTextureSlot;
         UINT samplerStateSlot;
-        UINT cameraConstantBufferSlot;
+        UINT transformationConstantBufferSlot;
         UINT materialConstantBufferSlot;
     };
 
@@ -27,8 +27,8 @@ public:
 
     HRESULT CreateDeviceDependentResources(ID3D11Device* device);    
 
-    void Render(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer cameraData, ID3D11Buffer* cameraConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots);
-    void RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer cameraData, ID3D11Buffer* cameraConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots);
+    void Render(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots);
+    void RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots);
 
 private:
     struct Material
@@ -74,7 +74,7 @@ private:
     HRESULT CreatePrimitive(ID3D11Device* device, tinygltf::Model& model, tinygltf::Primitive& gltfPrimitive, UINT matrix);
     HRESULT CreateShaders(ID3D11Device* device, D3D_SHADER_MACRO* defines, ID3D11VertexShader** vs, ID3D11PixelShader** ps, ID3D11InputLayout** il);
     
-    void RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer& cameraData, ID3D11Buffer* cameraConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots& slots);
+    void RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer& transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots& slots);
 
     std::string m_modelPath;
 

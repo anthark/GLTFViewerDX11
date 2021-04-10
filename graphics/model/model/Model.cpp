@@ -216,6 +216,9 @@ HRESULT Model::CreateMaterials(ID3D11Device* device, tinygltf::Model& model)
         if (gltfMaterial.occlusionTexture.index >= 0)
             defines.push_back({ "HAS_OCCLUSION_TEXTURE", "1" });
 
+        if (gltfMaterial.doubleSided)
+            defines.push_back({ "DOUBLE_SIDED", "1" });
+
         defines.push_back({ nullptr, nullptr });
 
         hr = CreateShaders(device, defines.data(), &material.pVertexShader, &material.pPixelShader, &material.pInputLayout);
@@ -268,6 +271,7 @@ HRESULT Model::CreatePrimitive(ID3D11Device* device, tinygltf::Model& model, tin
     HRESULT hr = S_OK;
 
     Primitive primitive = {};
+    primitive.matrix = matrix;
 
     for (std::pair<const std::string, int>& item : gltfPrimitive.attributes)
     {
@@ -346,8 +350,6 @@ HRESULT Model::CreatePrimitive(ID3D11Device* device, tinygltf::Model& model, tin
         return hr;
 
     primitive.material = gltfPrimitive.material;
-    primitive.matrix = matrix;
-
     if (m_materials[primitive.material].blend)
         m_transparentPrimitives.push_back(primitive);
     else
@@ -452,31 +454,31 @@ HRESULT Model::CreateShaders(ID3D11Device* device, D3D_SHADER_MACRO* defines, ID
     return hr;
 }
 
-void Model::Render(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer cameraData, ID3D11Buffer* cameraConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots)
+void Model::Render(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots)
 {
-    context->VSSetConstantBuffers(slots.cameraConstantBufferSlot, 1, &cameraConstantBuffer);
-    context->PSSetConstantBuffers(slots.cameraConstantBufferSlot, 1, &cameraConstantBuffer);
+    context->VSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
+    context->PSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
     context->PSSetConstantBuffers(slots.materialConstantBufferSlot, 1, &materialConstantBuffer);
     context->PSSetSamplers(slots.samplerStateSlot, 1, m_pSamplerState.GetAddressOf());
 
-    cameraData.World = DirectX::XMMatrixIdentity();
+    transformationData.World = DirectX::XMMatrixIdentity();
     for (Primitive& primitive : m_primitives)
-        RenderPrimitive(primitive, context, cameraData, cameraConstantBuffer, materialConstantBuffer, slots);
+        RenderPrimitive(primitive, context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots);
 }
 
-void Model::RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer cameraData, ID3D11Buffer* cameraConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots)
+void Model::RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots)
 {
-    context->VSSetConstantBuffers(slots.cameraConstantBufferSlot, 1, &cameraConstantBuffer);
-    context->PSSetConstantBuffers(slots.cameraConstantBufferSlot, 1, &cameraConstantBuffer);
+    context->VSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
+    context->PSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
     context->PSSetConstantBuffers(slots.materialConstantBufferSlot, 1, &materialConstantBuffer);
     context->PSSetSamplers(slots.samplerStateSlot, 1, m_pSamplerState.GetAddressOf());
 
-    cameraData.World = DirectX::XMMatrixIdentity();
+    transformationData.World = DirectX::XMMatrixIdentity();
     for (Primitive& primitive : m_transparentPrimitives)
-        RenderPrimitive(primitive, context, cameraData, cameraConstantBuffer, materialConstantBuffer, slots);
+        RenderPrimitive(primitive, context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots);
 }
 
-void Model::RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer& cameraData, ID3D11Buffer* cameraConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots& slots)
+void Model::RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer& transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots& slots)
 {
     std::vector<ID3D11Buffer*> combined;
     std::vector<UINT> offset;
@@ -505,9 +507,9 @@ void Model::RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, 
     context->VSSetShader(material.pVertexShader.Get(), nullptr, 0);
     context->PSSetShader(material.pPixelShader.Get(), nullptr, 0);
 
-    cameraData.World = DirectX::XMMatrixTranspose(m_worldMatricies[primitive.matrix]);
+    transformationData.World = DirectX::XMMatrixTranspose(m_worldMatricies[primitive.matrix]);
 
-    context->UpdateSubresource(cameraConstantBuffer, 0, NULL, &cameraData, 0, 0);
+    context->UpdateSubresource(transformationConstantBuffer, 0, NULL, &transformationData, 0, 0);
     context->UpdateSubresource(materialConstantBuffer, 0, NULL, &material.materialBufferData, 0, 0);
 
     if (material.baseColorTexture >= 0)

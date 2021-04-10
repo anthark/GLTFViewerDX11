@@ -186,13 +186,18 @@ float4 ps_main(PS_INPUT input) : SV_TARGET
 	float3 color1, color2, color3;
 	float3 v = normalize(CameraPos.xyz - input.WorldPos.xyz);
     float3 n = normalize(input.Normal);
-    
+
 #ifdef HAS_NORMAL_TEXTURE
     float3 scaledNormal = normalize(normalTexture.Sample(ModelSampler, input.Tex).xyz * 2.0 - 1.0);
     float3 tangent = normalize(input.Tangent.xyz);
     float3 binormal = cross(n, tangent);
     n = scaledNormal.x * tangent + scaledNormal.y * binormal + n;
-#endif    
+#endif
+
+#ifdef DOUBLE_SIDED
+    if (dot(-v, n) > 0.0f)
+        n = -n;
+#endif
 
     float2 material = GetMetalnessRoughness(input.Tex);
     float metalness = material.x;
