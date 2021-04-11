@@ -1,6 +1,6 @@
 #pragma once
 
-#define NUM_LIGHTS 3
+#define NUM_LIGHTS 1
 
 struct WorldViewProjectionConstantBuffer
 {
@@ -22,14 +22,11 @@ struct VertexPosData
 	DirectX::XMFLOAT3 Pos;
 };
 
-struct LightPositionConstantBuffer
+struct LightConstantBuffer
 {
 	DirectX::XMFLOAT4 LightPosition[NUM_LIGHTS];
-};
-
-struct LightColorConstantBuffer
-{
 	DirectX::XMFLOAT4 LightColor[NUM_LIGHTS];
+	DirectX::XMFLOAT4 LightAttenuation[NUM_LIGHTS];
 };
 
 __declspec(align(16))

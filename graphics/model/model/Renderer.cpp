@@ -23,8 +23,7 @@ Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources, cons
     m_frameCount(0),
     m_indexCount(0),
     m_constantBufferData(),
-    m_lightColorBufferData(),
-    m_lightPositionBufferData(),
+    m_lightBufferData(),
     m_materialBufferData()
 {};
 
@@ -601,40 +600,8 @@ HRESULT Renderer::CreateLights()
 {
     HRESULT hr = S_OK;
 
-    DirectX::XMFLOAT4 LightPositions[NUM_LIGHTS] =
-    {
-        DirectX::XMFLOAT4(0.0f, 0.0f, 3.0f, 0.0f),
-        DirectX::XMFLOAT4(0.0f, 0.0f, -3.0f, 0.0f),
-        DirectX::XMFLOAT4(2.0f, 2.0f, 1.0f, 0.0f)
-    };
-
-    DirectX::XMFLOAT4 LightColors[NUM_LIGHTS] =
-    {
-        DirectX::XMFLOAT4(1.0f, 0.9f, 0.8f, 1.0f),
-        DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
-        DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)
-    };
-
-    for (int i = 0; i < NUM_LIGHTS; i++)
-    {
-        m_lightColorBufferData.LightColor[i] = LightColors[i];
-        m_lightPositionBufferData.LightPosition[i] = LightPositions[i];
-    }
-
-    // Create the constant buffers for lights
-    CD3D11_BUFFER_DESC lpbd(
-        sizeof(LightPositionConstantBuffer),
-        D3D11_BIND_CONSTANT_BUFFER
-    );
-    hr = m_pDeviceResources->GetDevice()->CreateBuffer(&lpbd, nullptr, &m_pLightPositionBuffer);
-    if (FAILED(hr))
-        return hr;
-
-    CD3D11_BUFFER_DESC lcbd(
-        sizeof(LightColorConstantBuffer),
-        D3D11_BIND_CONSTANT_BUFFER
-    );
-    hr = m_pDeviceResources->GetDevice()->CreateBuffer(&lcbd, nullptr, &m_pLightColorBuffer);
+    CD3D11_BUFFER_DESC lbd(sizeof(LightConstantBuffer), D3D11_BIND_CONSTANT_BUFFER);
+    hr = m_pDeviceResources->GetDevice()->CreateBuffer(&lbd, nullptr, &m_pLightBuffer);
 
     return hr;
 }
@@ -684,8 +651,9 @@ void Renderer::Update()
 
     for (UINT i = 0; i < NUM_LIGHTS; ++i)
     {
-        m_lightColorBufferData.LightColor[i] = m_pSettings->GetLightColor(i);
-        m_lightPositionBufferData.LightPosition[i] = m_pSettings->GetLightPosition(i);
+        m_lightBufferData.LightColor[i] = m_pSettings->GetLightColor(i);
+        m_lightBufferData.LightPosition[i] = m_pSettings->GetLightPosition(i);
+        m_lightBufferData.LightAttenuation[i] = m_pSettings->GetLightAttenuation(i);
     }
 
     m_materialBufferData.Albedo = m_pSettings->GetAlbedo();
@@ -718,8 +686,7 @@ void Renderer::RenderSpheres()
     // Set primitive topology
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    context->UpdateSubresource(m_pLightPositionBuffer.Get(), 0, nullptr, &m_lightPositionBufferData, 0, 0);
-    context->UpdateSubresource(m_pLightColorBuffer.Get(), 0, nullptr, &m_lightColorBufferData, 0, 0);
+    context->UpdateSubresource(m_pLightBuffer.Get(), 0, nullptr, &m_lightBufferData, 0, 0);
 
     context->IASetInputLayout(m_pInputLayout.Get());
 
@@ -727,9 +694,8 @@ void Renderer::RenderSpheres()
     context->VSSetShader(m_pPBRVertexShader.Get(), nullptr, 0);
     context->VSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
     context->PSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
-    context->PSSetConstantBuffers(1, 1, m_pLightPositionBuffer.GetAddressOf());
-    context->PSSetConstantBuffers(2, 1, m_pLightColorBuffer.GetAddressOf());
-    context->PSSetConstantBuffers(3, 1, m_pMaterialBuffer.GetAddressOf());
+    context->PSSetConstantBuffers(1, 1, m_pLightBuffer.GetAddressOf());
+    context->PSSetConstantBuffers(2, 1, m_pMaterialBuffer.GetAddressOf());
     context->PSSetShaderResources(0, 1, m_pIrradianceShaderResourceView.GetAddressOf());
     context->PSSetShaderResources(1, 1, m_pPrefilteredColorShaderResourceView.GetAddressOf());
     context->PSSetShaderResources(2, 1, m_pPreintegratedBRDFShaderResourceView.GetAddressOf());
@@ -820,17 +786,15 @@ void Renderer::RenderModel()
 {
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
 
-    context->UpdateSubresource(m_pLightPositionBuffer.Get(), 0, nullptr, &m_lightPositionBufferData, 0, 0);
-    context->UpdateSubresource(m_pLightColorBuffer.Get(), 0, nullptr, &m_lightColorBufferData, 0, 0);
-    context->PSSetConstantBuffers(1, 1, m_pLightPositionBuffer.GetAddressOf());
-    context->PSSetConstantBuffers(2, 1, m_pLightColorBuffer.GetAddressOf());
+    context->UpdateSubresource(m_pLightBuffer.Get(), 0, nullptr, &m_lightBufferData, 0, 0);
+    context->PSSetConstantBuffers(1, 1, m_pLightBuffer.GetAddressOf());
     context->PSSetShaderResources(0, 1, m_pIrradianceShaderResourceView.GetAddressOf());
     context->PSSetShaderResources(1, 1, m_pPrefilteredColorShaderResourceView.GetAddressOf());
     context->PSSetShaderResources(2, 1, m_pPreintegratedBRDFShaderResourceView.GetAddressOf());
     context->PSSetSamplers(0, 1, m_pSamplerStates[0].GetAddressOf());
     context->PSSetSamplers(1, 1, m_pSamplerStates[1].GetAddressOf());
 
-    Model::ShadersSlots slots = { 3, 4, 5, 2, 0, 3 };
+    Model::ShadersSlots slots = { 3, 4, 5, 2, 0, 2 };
     m_pModel->Render(context, m_constantBufferData, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots);
     context->OMSetDepthStencilState(m_pDeviceResources->GetTransDepthStencil(), 0);
     m_pModel->RenderTransparent(context, m_constantBufferData, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots, m_pCamera->GetDirection());

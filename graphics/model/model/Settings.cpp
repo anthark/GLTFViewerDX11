@@ -15,10 +15,16 @@ Settings::Settings(const std::shared_ptr<DeviceResources>& deviceResources) :
     m_lightsThetaAngles(),
     m_lightsPhiAngles(),
     m_lightsDistances(),
-    m_lightsColors()
+    m_lightsColors(),
+    m_lightsAttenuations()
 {
     for (UINT i = 0; i < NUM_LIGHTS; ++i)
+    {
         m_lightsColors[i][0] = m_lightsColors[i][1] = m_lightsColors[i][2] = 1.0f;
+        m_lightsAttenuations[i][0] = 1.0f;
+        m_lightsAttenuations[i][1] = 0.1f;
+        m_lightsAttenuations[i][2] = 0.01f;
+    }
 };
 
 void Settings::CreateResources(HWND hWnd)
@@ -38,7 +44,7 @@ void Settings::Render()
     ImGui::NewFrame();
 
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
-    ImGui::SetNextWindowSize(ImVec2(500, 125), ImGuiCond_Once);
+    ImGui::SetNextWindowSize(ImVec2(410, 110), ImGuiCond_Once);
 
     ImGui::Begin("Settings");
 
@@ -54,12 +60,12 @@ void Settings::Render()
 
     for (UINT i = 0; i < NUM_LIGHTS; ++i)
     {
-        ImGui::SetNextWindowPos(ImVec2(0, 125 + 175 * static_cast<float>(i)), ImGuiCond_Once);
-        ImGui::SetNextWindowSize(ImVec2(500, 175), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(0, 110 + 175 * static_cast<float>(i)), ImGuiCond_Once);
+        ImGui::SetNextWindowSize(ImVec2(410, 175), ImGuiCond_Once);
 
         ImGui::Begin((std::string("Light ") + std::to_string(i)).c_str());
 
-        ImGui::SliderFloat("Distance", m_lightsDistances + i, 10.0f, 1000.0f);
+        ImGui::SliderFloat("Distance", m_lightsDistances + i, 0.0f, 1000.0f);
 
         ImGui::SliderFloat("Theta", m_lightsThetaAngles + i, 0.0f, static_cast<float>(M_PI));
 
@@ -68,6 +74,8 @@ void Settings::Render()
         ImGui::ColorEdit3("Color", m_lightsColors[i]);
 
         ImGui::SliderFloat("Strength", m_lightsStrengths + i, 0.0f, 500.0f);
+
+        ImGui::SliderFloat3("Attenuation", m_lightsAttenuations[i], 0.001f, 1.0f);
 
         ImGui::End();
     }
@@ -101,6 +109,16 @@ DirectX::XMFLOAT4 Settings::GetLightPosition(UINT index) const
     position[1] = m_lightsDistances[index] * static_cast<float>(cos(m_lightsThetaAngles[index]));
     position[3] = 0.0f;
     return DirectX::XMFLOAT4(position);
+}
+
+DirectX::XMFLOAT4 Settings::GetLightAttenuation(UINT index) const
+{
+    if (index >= NUM_LIGHTS)
+        return DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
+    float attenuation[4] = {};
+    for (UINT i = 0; i < 3; ++i)
+        attenuation[i] = m_lightsAttenuations[index][i];
+    return DirectX::XMFLOAT4(attenuation);
 }
 
 Settings::~Settings()

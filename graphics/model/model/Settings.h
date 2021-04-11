@@ -31,6 +31,7 @@ public:
 
     DirectX::XMFLOAT4 GetLightColor(UINT index) const;
     DirectX::XMFLOAT4 GetLightPosition(UINT index) const;
+    DirectX::XMFLOAT4 GetLightAttenuation(UINT index) const;
 
     DirectX::XMFLOAT4 GetAlbedo() const { return DirectX::XMFLOAT4(m_albedo); };
 
@@ -47,6 +48,7 @@ private:
     float m_lightsPhiAngles[NUM_LIGHTS];
     float m_lightsDistances[NUM_LIGHTS];
     float m_lightsColors[NUM_LIGHTS][3];
+    float m_lightsAttenuations[NUM_LIGHTS][3];
     
     float m_albedo[4] = { 0.25f, 1.0f, 1.0f, 1.0f };
 };

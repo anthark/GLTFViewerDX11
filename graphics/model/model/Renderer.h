@@ -76,8 +76,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pPreintegratedBRDFPixelShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pEnvironmentCubePixelShader;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pConstantBuffer;
-    Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightPositionBuffer;
-    Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightColorBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pMaterialBuffer;
 
     std::vector<Microsoft::WRL::ComPtr<ID3D11SamplerState>> m_pSamplerStates;
@@ -85,8 +84,7 @@ private:
     std::unique_ptr<Model> m_pModel;
 
     WorldViewProjectionConstantBuffer m_constantBufferData;
-    LightPositionConstantBuffer       m_lightPositionBufferData;
-    LightColorConstantBuffer          m_lightColorBufferData;
+    LightConstantBuffer               m_lightBufferData;
     MaterialConstantBuffer            m_materialBufferData;
     
     UINT32 m_indexCount;
