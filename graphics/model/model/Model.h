@@ -37,7 +37,7 @@ public:
     HRESULT CreateDeviceDependentResources(ID3D11Device* device);    
 
     void Render(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots);
-    void RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots);
+    void RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots, DirectX::XMVECTOR cameraDir);
 
 private:
     struct Material
@@ -63,8 +63,8 @@ private:
     {
         std::vector<Attribute> attributes;
         UINT vertexCount;
-        std::vector<double> max;
-        std::vector<double> min;
+        DirectX::XMVECTOR max;
+        DirectX::XMVECTOR min;
         D3D11_PRIMITIVE_TOPOLOGY primitiveTopology;
         DXGI_FORMAT indexFormat;
         Microsoft::WRL::ComPtr<ID3D11Buffer> pIndexBuffer;

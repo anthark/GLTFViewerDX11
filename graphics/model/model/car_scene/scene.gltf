@@ -4447,6 +4447,126 @@
         0
       ],
       "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 238680,
+      "componentType": 5126,
+      "count": 808,
+      "max": [
+        92.93441772460938,
+        -53.1886100769043,
+        40.63251876831055
+      ],
+      "min": [
+        25.840667724609375,
+        -60.38554763793945,
+        12.28482437133789
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 170352,
+      "componentType": 5125,
+      "count": 516,
+      "max": [
+        119
+      ],
+      "min": [
+        0
+      ],
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 238680,
+      "componentType": 5126,
+      "count": 808,
+      "max": [
+        92.93441772460938,
+        60.38555908203125,
+        40.63252639770508
+      ],
+      "min": [
+        25.840667724609375,
+        53.1886100769043,
+        12.28483772277832
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 172416,
+      "componentType": 5125,
+      "count": 516,
+      "max": [
+        239
+      ],
+      "min": [
+        120
+      ],
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 238680,
+      "componentType": 5126,
+      "count": 808,
+      "max": [
+        118.947265625,
+        50.2138671875,
+        44.885921478271484
+      ],
+      "min": [
+        89.36404418945312,
+        -50.213863372802734,
+        13.261487007141113
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 174480,
+      "componentType": 5125,
+      "count": 1380,
+      "max": [
+        545
+      ],
+      "min": [
+        240
+      ],
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 238680,
+      "componentType": 5126,
+      "count": 808,
+      "max": [
+        -49.65616226196289,
+        51.625877380371094,
+        48.19533920288086
+      ],
+      "min": [
+        -75.78923034667969,
+        -51.58333206176758,
+        15.571854591369629
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 180000,
+      "componentType": 5125,
+      "count": 1224,
+      "max": [
+        807
+      ],
+      "min": [
+        546
+      ],
+      "type": "SCALAR"
     }
   ],
   "asset": {
@@ -5778,6 +5898,74 @@
           "mode": 4
         }
       ]
+    },
+    {
+      "name": "car_body_glass_1",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 13,
+            "POSITION": 278,
+            "TANGENT": 14,
+            "TEXCOORD_0": 15,
+            "TEXCOORD_1": 16
+          },
+          "indices": 279,
+          "material": 2,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "car_body_glass_2",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 13,
+            "POSITION": 280,
+            "TANGENT": 14,
+            "TEXCOORD_0": 15,
+            "TEXCOORD_1": 16
+          },
+          "indices": 281,
+          "material": 2,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "car_body_glass_3",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 13,
+            "POSITION": 282,
+            "TANGENT": 14,
+            "TEXCOORD_0": 15,
+            "TEXCOORD_1": 16
+          },
+          "indices": 283,
+          "material": 2,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "car_body_glass_4",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 13,
+            "POSITION": 284,
+            "TANGENT": 14,
+            "TEXCOORD_0": 15,
+            "TEXCOORD_1": 16
+          },
+          "indices": 285,
+          "material": 2,
+          "mode": 4
+        }
+      ]
     }
   ],
   "nodes": [
@@ -5866,7 +6054,10 @@
       "children": [
         5,
         6,
-        7
+        91,
+        92,
+        93,
+        94
       ],
       "matrix": [
         1,
@@ -7022,6 +7213,22 @@
     {
       "mesh": 46,
       "name": "vintage_lantern_glass_7_lantern_wall_glass_1_0"
+    },
+    {
+      "mesh": 47,
+      "name": "car_body_glass_1"
+    },
+    {
+      "mesh": 48,
+      "name": "car_body_glass_2"
+    },
+    {
+      "mesh": 49,
+      "name": "car_body_glass_3"
+    },
+    {
+      "mesh": 50,
+      "name": "car_body_glass_4"
     }
   ],
   "samplers": [

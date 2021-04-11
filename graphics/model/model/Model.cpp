@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include <algorithm>
+
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define TINYGLTF_IMPLEMENTATION
@@ -300,7 +302,15 @@ HRESULT Model::CreatePrimitive(ID3D11Device* device, tinygltf::Model& model, tin
         primitive.attributes.push_back(attribute);
 
         if (item.first == "POSITION")
+        {
             primitive.vertexCount = static_cast<UINT>(gltfAccessor.count);
+            
+            DirectX::XMFLOAT3 maxPosition(static_cast<float>(gltfAccessor.maxValues[0]), static_cast<float>(gltfAccessor.maxValues[1]), static_cast<float>(gltfAccessor.maxValues[2]));
+            DirectX::XMFLOAT3 minPosition(static_cast<float>(gltfAccessor.minValues[0]), static_cast<float>(gltfAccessor.minValues[1]), static_cast<float>(gltfAccessor.minValues[2]));
+
+            primitive.max = DirectX::XMVector3Transform(DirectX::XMLoadFloat3(&maxPosition), m_worldMatricies[primitive.matrix]);
+            primitive.min = DirectX::XMVector3Transform(DirectX::XMLoadFloat3(&minPosition), m_worldMatricies[primitive.matrix]);
+        }
     }
 
     switch (gltfPrimitive.mode)
@@ -502,7 +512,12 @@ void Model::Render(ID3D11DeviceContext* context, WorldViewProjectionConstantBuff
         RenderPrimitive(primitive, context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots);
 }
 
-void Model::RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots)
+bool CompareDistancePairs(const std::pair<float, size_t>& p1, const std::pair<float, size_t>& p2)
+{
+    return p1.first < p2.first;
+}
+
+void Model::RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots, DirectX::XMVECTOR cameraDir)
 {
     context->VSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
     context->PSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
@@ -510,8 +525,22 @@ void Model::RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionC
     context->PSSetSamplers(slots.samplerStateSlot, 1, m_pSamplerState.GetAddressOf());
 
     transformationData.World = DirectX::XMMatrixIdentity();
-    for (Primitive& primitive : m_transparentPrimitives)
-        RenderPrimitive(primitive, context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots);
+    
+    std::vector<std::pair<float, size_t>> distances;
+    float distance;
+    DirectX::XMVECTOR center;
+    DirectX::XMVECTOR cameraPos = DirectX::XMLoadFloat4(&transformationData.CameraPos);
+    for (size_t i = 0; i < m_transparentPrimitives.size(); ++i)
+    {
+        center = DirectX::XMVectorDivide(DirectX::XMVectorAdd(m_transparentPrimitives[i].max, m_transparentPrimitives[i].min), DirectX::XMVectorReplicate(2));
+        distance = DirectX::XMVector3Dot(DirectX::XMVectorSubtract(center, cameraPos), cameraDir).m128_f32[0];
+        distances.push_back(std::pair<float, size_t>(distance, i));
+    }
+
+    std::sort(distances.begin(), distances.end(), CompareDistancePairs);
+
+    for (auto iter = distances.rbegin(); iter != distances.rend(); ++iter)
+        RenderPrimitive(m_transparentPrimitives[(*iter).second], context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots);
 }
 
 void Model::RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer& transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots& slots)

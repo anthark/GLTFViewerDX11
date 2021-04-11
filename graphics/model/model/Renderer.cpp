@@ -833,7 +833,7 @@ void Renderer::RenderModel()
     Model::ShadersSlots slots = { 3, 4, 5, 2, 0, 3 };
     m_pModel->Render(context, m_constantBufferData, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots);
     context->OMSetDepthStencilState(m_pDeviceResources->GetTransDepthStencil(), 0);
-    m_pModel->RenderTransparent(context, m_constantBufferData, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots);
+    m_pModel->RenderTransparent(context, m_constantBufferData, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots, m_pCamera->GetDirection());
 
     ID3D11ShaderResourceView* nullsrv[] = { nullptr };
     context->PSSetShaderResources(0, 1, nullsrv);

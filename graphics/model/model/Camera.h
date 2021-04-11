@@ -7,6 +7,7 @@ public:
     ~Camera();
 
     DirectX::XMVECTOR GetPosition() const { return m_eye; };
+    DirectX::XMVECTOR GetDirection() const { return m_viewDir; };
     DirectX::XMMATRIX GetViewMatrix() const;
 
     void MoveDirection(float delta);
