@@ -34,6 +34,9 @@
     <Filter Include="IBLShaders">
       <UniqueIdentifier>{2b891cea-3a4c-429c-95f1-1f22277418d0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="BloomShaders">
+      <UniqueIdentifier>{9940c353-ac03-4433-91fc-990bd9797ecd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DeviceResources.cpp">
@@ -88,6 +91,9 @@
       <Filter>Исходные файлы\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="Model.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="BloomProcess.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
   </ItemGroup>
@@ -157,6 +163,15 @@
     </FxCompile>
     <FxCompile Include="IBLVertexShader.hlsl">
       <Filter>IBLShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="BloomShaders.fx">
+      <Filter>BloomShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="BloomAddComputeShader.hlsl">
+      <Filter>BloomShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="BlurComputeShader.hlsl">
+      <Filter>BloomShaders</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
@@ -230,6 +245,9 @@
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="Model.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="BloomProcess.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>

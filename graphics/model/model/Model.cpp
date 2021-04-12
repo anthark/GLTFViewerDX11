@@ -28,7 +28,7 @@ HRESULT Model::CreateDeviceDependentResources(ID3D11Device* device)
     if (!ret)
         return E_FAIL;
 
-    hr = CreateVertexShader(device);
+    hr = CreateShaders(device);
     if (FAILED(hr))
         return hr;
 
@@ -230,6 +230,8 @@ HRESULT Model::CreateMaterials(ID3D11Device* device, tinygltf::Model& model)
         if (FAILED(hr))
             return hr;
 
+        material.emissiveTexture = gltfMaterial.emissiveTexture.index;
+
         m_materials.push_back(material);
     }
 
@@ -364,9 +366,17 @@ HRESULT Model::CreatePrimitive(ID3D11Device* device, tinygltf::Model& model, tin
 
     primitive.material = gltfPrimitive.material;
     if (m_materials[primitive.material].blend)
+    {
         m_transparentPrimitives.push_back(primitive);
+        if (m_materials[primitive.material].emissiveTexture >= 0)
+            m_emissiveTransparentPrimitives.push_back(primitive);
+    }
     else
+    {
         m_primitives.push_back(primitive);
+        if (m_materials[primitive.material].emissiveTexture >= 0)
+            m_emissivePrimitives.push_back(primitive);
+    }
 
     return hr;
 }
@@ -424,7 +434,7 @@ HRESULT Model::CreatePrimitives(ID3D11Device* device, tinygltf::Model& model)
     return hr;
 }
 
-HRESULT Model::CreateVertexShader(ID3D11Device* device)
+HRESULT Model::CreateShaders(ID3D11Device* device)
 {
     HRESULT hr = S_OK;
 
@@ -455,6 +465,22 @@ HRESULT Model::CreateVertexShader(ID3D11Device* device)
     };
 
     hr = device->CreateInputLayout(layout, ARRAYSIZE(layout), blob->GetBufferPointer(), blob->GetBufferSize(), &m_pInputLayout);
+    if (FAILED(hr))
+        return hr;
+
+    defines.resize(1);
+    defines.push_back({ "HAS_EMISSIVE", "1" });
+    defines.push_back({ nullptr, nullptr });
+
+#ifdef ENV64
+    hr = CompileShaderFromFile(L"../../model/PBRShaders.fx", "ps_main", "ps_5_0", &blob, defines.data());
+#else
+    hr = CompileShaderFromFile(L"../model/PBRShaders.fx", "ps_main", "ps_5_0", &blob, defines);
+#endif
+    if (FAILED(hr))
+        return hr;
+
+    hr = device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &m_pEmissivePixelShader);
 
     return hr;
 }
@@ -543,7 +569,7 @@ void Model::RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionC
         RenderPrimitive(m_transparentPrimitives[(*iter).second], context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots);
 }
 
-void Model::RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer& transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots& slots)
+void Model::RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer& transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots& slots, bool emissive)
 {
     std::vector<ID3D11Buffer*> combined;
     std::vector<UINT> offset;
@@ -570,23 +596,72 @@ void Model::RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, 
 
     context->IASetInputLayout(m_pInputLayout.Get());
     context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
-    context->PSSetShader(m_pPixelShaders[material.pixelShaderDefinesFlags].Get(), nullptr, 0);
 
     transformationData.World = DirectX::XMMatrixTranspose(m_worldMatricies[primitive.matrix]);
 
     context->UpdateSubresource(transformationConstantBuffer, 0, NULL, &transformationData, 0, 0);
+
+    MaterialConstantBuffer materialBufferData = material.materialBufferData;
+    if (emissive)
+    {
+        materialBufferData.Albedo = DirectX::XMFLOAT4(1, 1, 1, materialBufferData.Albedo.w);
+        context->PSSetShaderResources(slots.baseColorTextureSlot, 1, m_pShaderResourceViews[material.emissiveTexture].GetAddressOf());
+        context->PSSetShader(m_pEmissivePixelShader.Get(), nullptr, 0);
+    }
+    else
+    {
+        context->PSSetShader(m_pPixelShaders[material.pixelShaderDefinesFlags].Get(), nullptr, 0);
+        if (material.baseColorTexture >= 0)
+            context->PSSetShaderResources(slots.baseColorTextureSlot, 1, m_pShaderResourceViews[material.baseColorTexture].GetAddressOf());
+        if (material.metallicRoughnessTexture >= 0)
+            context->PSSetShaderResources(slots.metallicRoughnessTextureSlot, 1, m_pShaderResourceViews[material.metallicRoughnessTexture].GetAddressOf());
+        if (material.normalTexture >= 0)
+            context->PSSetShaderResources(slots.normalTextureSlot, 1, m_pShaderResourceViews[material.normalTexture].GetAddressOf());
+    }
     context->UpdateSubresource(materialConstantBuffer, 0, NULL, &material.materialBufferData, 0, 0);
 
-    if (material.baseColorTexture >= 0)
-        context->PSSetShaderResources(slots.baseColorTextureSlot, 1, m_pShaderResourceViews[material.baseColorTexture].GetAddressOf());
-    if (material.metallicRoughnessTexture >= 0)
-        context->PSSetShaderResources(slots.metallicRoughnessTextureSlot, 1, m_pShaderResourceViews[material.metallicRoughnessTexture].GetAddressOf());
-    if (material.normalTexture >= 0)
-        context->PSSetShaderResources(slots.normalTextureSlot, 1, m_pShaderResourceViews[material.normalTexture].GetAddressOf());
     context->DrawIndexed(primitive.indexCount, 0, 0);
 
     if (material.blend)
         context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
+}
+
+void Model::RenderEmissive(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots)
+{
+    context->VSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
+    context->PSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
+    context->PSSetConstantBuffers(slots.materialConstantBufferSlot, 1, &materialConstantBuffer);
+    context->PSSetSamplers(slots.samplerStateSlot, 1, m_pSamplerState.GetAddressOf());
+
+    transformationData.World = DirectX::XMMatrixIdentity();
+    for (Primitive& primitive : m_emissivePrimitives)
+        RenderPrimitive(primitive, context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots, true);
+}
+
+void Model::RenderEmissiveTransparent(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots, DirectX::XMVECTOR cameraDir)
+{
+    context->VSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
+    context->PSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
+    context->PSSetConstantBuffers(slots.materialConstantBufferSlot, 1, &materialConstantBuffer);
+    context->PSSetSamplers(slots.samplerStateSlot, 1, m_pSamplerState.GetAddressOf());
+
+    transformationData.World = DirectX::XMMatrixIdentity();
+
+    std::vector<std::pair<float, size_t>> distances;
+    float distance;
+    DirectX::XMVECTOR center;
+    DirectX::XMVECTOR cameraPos = DirectX::XMLoadFloat4(&transformationData.CameraPos);
+    for (size_t i = 0; i < m_emissiveTransparentPrimitives.size(); ++i)
+    {
+        center = DirectX::XMVectorDivide(DirectX::XMVectorAdd(m_emissiveTransparentPrimitives[i].max, m_emissiveTransparentPrimitives[i].min), DirectX::XMVectorReplicate(2));
+        distance = DirectX::XMVector3Dot(DirectX::XMVectorSubtract(center, cameraPos), cameraDir).m128_f32[0];
+        distances.push_back(std::pair<float, size_t>(distance, i));
+    }
+
+    std::sort(distances.begin(), distances.end(), CompareDistancePairs);
+
+    for (auto iter = distances.rbegin(); iter != distances.rend(); ++iter)
+        RenderPrimitive(m_emissiveTransparentPrimitives[(*iter).second], context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots, true);
 }
 
 Model::~Model()

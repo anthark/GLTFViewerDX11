@@ -52,6 +52,21 @@ HRESULT CreatePixelShader(ID3D11Device* device, const WCHAR* szFileName, std::ve
     return hr;
 }
 
+HRESULT CreateComputeShader(ID3D11Device* device, const WCHAR* szFileName, std::vector<BYTE>& bytes, ID3D11ComputeShader** computeShader)
+{
+    HRESULT hr = S_OK;
+
+    // Read the compute shader
+    hr = ReadCompiledShader(szFileName, bytes);
+    if (FAILED(hr))
+        return hr;
+
+    // Create the compute shader
+    hr = device->CreateComputeShader(bytes.data(), bytes.size(), nullptr, computeShader);
+
+    return hr;
+}
+
 HRESULT CompileShaderFromFile(const WCHAR* szFileName, LPCSTR szEntryPoint, LPCSTR szShaderModel, ID3DBlob** ppBlobOut, D3D_SHADER_MACRO* pDefines)
 {
     HRESULT hr = S_OK;

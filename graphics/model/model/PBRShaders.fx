@@ -23,7 +23,7 @@ cbuffer Transformation: register(b0)
 	float4 CameraPos;
 }
 
-cbuffer LightsColor : register(b1)
+cbuffer Lights : register(b1)
 {
     float4 LightPositions[NUM_LIGHTS];
     float4 LightColors[NUM_LIGHTS];
@@ -187,6 +187,9 @@ float4 ps_main(PS_INPUT input) : SV_TARGET
 	float3 v = normalize(CameraPos.xyz - input.WorldPos.xyz);
     float3 n = normalize(input.Normal);
 
+#ifdef HAS_EMISSIVE
+    return diffuseTexture.Sample(ModelSampler, input.Tex);
+#else
 #ifdef HAS_NORMAL_TEXTURE
     float3 nm = (normalTexture.Sample(ModelSampler, input.Tex) * 2.0f - 1.0f).xyz;
     float3 tangent = normalize(input.Tangent);
@@ -211,4 +214,5 @@ float4 ps_main(PS_INPUT input) : SV_TARGET
     float3 ambient = Ambient(n, v, albedo.rgb, metalness, roughness);
 
     return float4(color + ambient, albedo.a);
+#endif
 }

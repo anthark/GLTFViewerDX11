@@ -590,6 +590,11 @@ HRESULT Renderer::CreateDeviceDependentResources()
     if (FAILED(hr))
         return hr;
 
+    m_pBloom = std::unique_ptr<BloomProcess>(new BloomProcess());
+    hr = m_pBloom->CreateDeviceDependentResources(m_pDeviceResources->GetDevice());
+    if (FAILED(hr))
+        return hr;
+
     m_pToneMap = std::unique_ptr<ToneMapPostProcess>(new ToneMapPostProcess());
     hr = m_pToneMap->CreateDeviceDependentResources(m_pDeviceResources->GetDevice());
     
@@ -619,6 +624,10 @@ HRESULT Renderer::CreateWindowSizeDependentResources()
     if (FAILED(hr))
         return hr;
 
+    hr = m_pBloom->CreateWindowSizeDependentResources(m_pDeviceResources->GetDevice(), m_pDeviceResources->GetWidth(), m_pDeviceResources->GetHeight());
+    if (FAILED(hr))
+        return hr;
+
     hr = m_pToneMap->CreateWindowSizeDependentResources(m_pDeviceResources->GetDevice(), m_pDeviceResources->GetWidth(), m_pDeviceResources->GetHeight());
 
     return hr;
@@ -631,6 +640,10 @@ HRESULT Renderer::OnResize()
     UpdatePerspective();
 
     hr = m_pRenderTexture->CreateResources(m_pDeviceResources->GetDevice(), m_pDeviceResources->GetWidth(), m_pDeviceResources->GetHeight());
+    if (FAILED(hr))
+        return hr;
+
+    hr = m_pBloom->CreateWindowSizeDependentResources(m_pDeviceResources->GetDevice(), m_pDeviceResources->GetWidth(), m_pDeviceResources->GetHeight());
     if (FAILED(hr))
         return hr;
 
@@ -669,6 +682,9 @@ void Renderer::Clear()
     context->ClearRenderTargetView(m_pRenderTexture->GetRenderTargetView(), backgroundColour);
     context->ClearRenderTargetView(m_pDeviceResources->GetRenderTarget(), backgroundColour);
     context->ClearDepthStencilView(m_pDeviceResources->GetDepthStencil(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+    float blackColour[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    context->ClearRenderTargetView(m_pBloom->GetBloomRenderTargetView(), blackColour);
 }
 
 void Renderer::RenderSpheres()
@@ -785,6 +801,8 @@ void Renderer::PostProcessTexture()
 void Renderer::RenderModel()
 {
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
+    ID3D11RenderTargetView* renderTarget = m_pRenderTexture->GetRenderTargetView();
+    ID3D11RenderTargetView* bloomRenderTarget = m_pBloom->GetBloomRenderTargetView();
 
     context->UpdateSubresource(m_pLightBuffer.Get(), 0, nullptr, &m_lightBufferData, 0, 0);
     context->PSSetConstantBuffers(1, 1, m_pLightBuffer.GetAddressOf());
@@ -795,12 +813,23 @@ void Renderer::RenderModel()
     context->PSSetSamplers(1, 1, m_pSamplerStates[1].GetAddressOf());
 
     Model::ShadersSlots slots = { 3, 4, 5, 2, 0, 2 };
+    context->OMSetRenderTargets(1, &renderTarget, m_pDeviceResources->GetDepthStencil());
     m_pModel->Render(context, m_constantBufferData, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots);
+    
+    context->OMSetRenderTargets(1, &bloomRenderTarget, m_pDeviceResources->GetDepthStencil());
+    m_pModel->RenderEmissive(context, m_constantBufferData, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots);
+    
+    context->OMSetRenderTargets(1, &renderTarget, m_pDeviceResources->GetDepthStencil());
     context->OMSetDepthStencilState(m_pDeviceResources->GetTransDepthStencil(), 0);
     m_pModel->RenderTransparent(context, m_constantBufferData, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots, m_pCamera->GetDirection());
 
+    context->OMSetRenderTargets(1, &bloomRenderTarget, m_pDeviceResources->GetDepthStencil());
+    context->OMSetDepthStencilState(m_pDeviceResources->GetTransDepthStencil(), 0);
+    m_pModel->RenderEmissiveTransparent(context, m_constantBufferData, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots, m_pCamera->GetDirection());
+
     ID3D11ShaderResourceView* nullsrv[] = { nullptr };
     context->PSSetShaderResources(0, 1, nullsrv);
+    context->OMSetRenderTargets(1, &renderTarget, m_pDeviceResources->GetDepthStencil());
 }
 
 void Renderer::Render()
@@ -820,7 +849,12 @@ void Renderer::Render()
         
         RenderEnvironment();
         if (m_pSettings->GetSceneMode() == Settings::SETTINGS_SCENE_MODE::MODEL)
+        {
             RenderModel();
+
+            context->OMSetRenderTargets(0, nullptr, nullptr);
+            m_pBloom->Process(context, m_pRenderTexture.get(), m_pDeviceResources->GetViewPort());
+        }
         else
             RenderSpheres();
         

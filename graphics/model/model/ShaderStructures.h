@@ -42,3 +42,9 @@ struct MaterialConstantBuffer
 	float Roughness;
 	float Metalness;
 };
+
+__declspec(align(16))
+struct BlurConstantBuffer
+{
+	DirectX::XMUINT2 ImageSize;
+};

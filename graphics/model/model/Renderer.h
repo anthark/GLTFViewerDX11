@@ -5,6 +5,7 @@
 #include "ShaderStructures.h"
 #include "ToneMapPostProcess.h"
 #include "Camera.h"
+#include "BloomProcess.h"
 #include "Settings.h"
 #include "Model.h"
 
@@ -41,11 +42,12 @@ private:
     void RenderEnvironment();
     void PostProcessTexture();
 
-    std::unique_ptr<RenderTexture>        m_pRenderTexture;
-    std::unique_ptr<ToneMapPostProcess>   m_pToneMap;
-    std::shared_ptr<Camera>               m_pCamera;
-    std::shared_ptr<DeviceResources>      m_pDeviceResources;
-    std::shared_ptr<Settings>             m_pSettings;
+    std::unique_ptr<RenderTexture>      m_pRenderTexture;
+    std::unique_ptr<ToneMapPostProcess> m_pToneMap;
+    std::unique_ptr<BloomProcess>       m_pBloom;
+    std::shared_ptr<Camera>             m_pCamera;
+    std::shared_ptr<DeviceResources>    m_pDeviceResources;
+    std::shared_ptr<Settings>           m_pSettings;
 
     Microsoft::WRL::ComPtr<ID3D11InputLayout>        m_pInputLayout;
     Microsoft::WRL::ComPtr<ID3D11InputLayout>        m_pIBLInputLayout;

@@ -18,7 +18,7 @@ HRESULT RenderTexture::CreateResources(ID3D11Device* device, UINT width, UINT he
         height,
         1,
         1,
-        D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
+        D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS,
         D3D11_USAGE_DEFAULT,
         0,
         1
@@ -39,6 +39,11 @@ HRESULT RenderTexture::CreateResources(ID3D11Device* device, UINT width, UINT he
     CD3D11_SHADER_RESOURCE_VIEW_DESC srvd(D3D11_SRV_DIMENSION_TEXTURE2D, m_format);
 
     hr = device->CreateShaderResourceView(m_pRenderTarget.Get(), &srvd, m_pShaderResourceView.ReleaseAndGetAddressOf());
+    if (FAILED(hr))
+        return hr;
+
+    CD3D11_UNORDERED_ACCESS_VIEW_DESC uavd(D3D11_UAV_DIMENSION_TEXTURE2D, m_format);
+    hr = device->CreateUnorderedAccessView(m_pRenderTarget.Get(), &uavd, m_pUnorderedAccessView.ReleaseAndGetAddressOf());
 
     m_viewport.Width = static_cast<FLOAT>(width);
     m_viewport.Height = static_cast<FLOAT>(height);
