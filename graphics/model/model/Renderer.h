@@ -37,7 +37,7 @@ private:
     void UpdatePerspective();
 
     void Clear();
-    void RenderSpheres();
+    void RenderSphere();
     void RenderModel();
     void RenderEnvironment();
     void PostProcessTexture();

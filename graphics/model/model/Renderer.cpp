@@ -148,7 +148,7 @@ HRESULT Renderer::CreateSphere()
 {
     HRESULT hr = S_OK;
 
-    const int numLines = 16;
+    const int numLines = 32;
     const float spacing = 1.0f / numLines;
 
     // Create vertex buffer
@@ -670,6 +670,8 @@ void Renderer::Update()
     }
 
     m_materialBufferData.Albedo = m_pSettings->GetAlbedo();
+    m_materialBufferData.Roughness = m_pSettings->GetRoughness();
+    m_materialBufferData.Metalness = m_pSettings->GetMetalness();
 }
 
 void Renderer::Clear()
@@ -687,7 +689,7 @@ void Renderer::Clear()
     context->ClearRenderTargetView(m_pBloom->GetBloomRenderTargetView(), blackColour);
 }
 
-void Renderer::RenderSpheres()
+void Renderer::RenderSphere()
 {
     ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
 
@@ -737,24 +739,10 @@ void Renderer::RenderSpheres()
         break;
     }
 
-    const int sphereGridSize = 10;
-    const float gridWidth = 5;
-    for (int i = 0; i < sphereGridSize; i++)
-    {
-        for (int j = 0; j < sphereGridSize; j++)
-        {
-            m_constantBufferData.World = DirectX::XMMatrixTranspose(DirectX::XMMatrixTranslation(
-                gridWidth * (i / (sphereGridSize - 1.0f) - 0.5f),
-                gridWidth * (j / (sphereGridSize - 1.0f) - 0.5f),
-                0
-            ));
-            context->UpdateSubresource(m_pConstantBuffer.Get(), 0, nullptr, &m_constantBufferData, 0, 0);
-            m_materialBufferData.Roughness = i / (sphereGridSize - 1.0f);
-            m_materialBufferData.Metalness = j / (sphereGridSize - 1.0f);
-            context->UpdateSubresource(m_pMaterialBuffer.Get(), 0, nullptr, &m_materialBufferData, 0, 0);
-            context->DrawIndexed(m_indexCount, 0, 0);
-        }
-    }
+    m_constantBufferData.World = DirectX::XMMatrixTranspose(DirectX::XMMatrixScaling(100, 100, 100));
+    context->UpdateSubresource(m_pConstantBuffer.Get(), 0, nullptr, &m_constantBufferData, 0, 0);
+    context->UpdateSubresource(m_pMaterialBuffer.Get(), 0, nullptr, &m_materialBufferData, 0, 0);
+    context->DrawIndexed(m_indexCount, 0, 0);
 }
 
 void Renderer::RenderEnvironment()
@@ -856,7 +844,7 @@ void Renderer::Render()
             m_pBloom->Process(context, m_pRenderTexture.get(), m_pDeviceResources->GetViewPort());
         }
         else
-            RenderSpheres();
+            RenderSphere();
         
         PostProcessTexture();
     }
@@ -865,7 +853,7 @@ void Renderer::Render()
         renderTarget = m_pDeviceResources->GetRenderTarget();
         context->OMSetRenderTargets(1, &renderTarget, m_pDeviceResources->GetDepthStencil());
         
-        RenderSpheres();
+        RenderSphere();
     }
 }
 

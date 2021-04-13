@@ -150,13 +150,13 @@ float3 FresnelSchlickRoughnessFunction(float3 F0, float3 n, float3 v, float roug
 float3 Ambient(float3 n, float3 v, float3 albedo, float metalness, float roughness)
 {
     float3 r = normalize(reflect(-v, n));
-    float3 prefilteredColor = prefilteredColorTexture.SampleLevel(MinMagMipLinear, r, roughness * MAX_REFLECTION_LOD).xyz;
+    float3 prefilteredColor = prefilteredColorTexture.SampleLevel(MinMagMipLinear, r, roughness * MAX_REFLECTION_LOD).rgb;
     float3 F0 = lerp(float3(0.04, 0.04, 0.04), albedo, metalness);
-    float3 F = FresnelSchlickRoughnessFunction(F0, n, v, roughness);
-    float2 envBRDF = preintegratedBRDFTexture.Sample(MinMagLinearMipPointClamp, float2(max(dot(n, v), 0.0), roughness)).xy;
+    float2 envBRDF = preintegratedBRDFTexture.Sample(MinMagLinearMipPointClamp, float2(dot(n, v), roughness)).xy;
     float3 specular = prefilteredColor * (F0 * envBRDF.x + envBRDF.y);
 
-    float3 irradiance = irradianceTexture.Sample(MinMagMipLinear, n).xyz;
+    float3 irradiance = irradianceTexture.Sample(MinMagMipLinear, n).rgb;
+    float3 F = FresnelSchlickRoughnessFunction(F0, n, v, roughness);
     return (1 - F) * irradiance * albedo * (1 - metalness) + specular;
 }
 
@@ -165,6 +165,8 @@ float4 GetAlbedo(float2 uv)
     float4 albedo = Albedo;
 #ifdef HAS_COLOR_TEXTURE
     albedo *= pow(diffuseTexture.Sample(ModelSampler, uv), 2.2f);
+#else
+    albedo = pow(albedo, 2.2f);
 #endif
 #ifdef HAS_OCCLUSION_TEXTURE
     albedo.xyz *= metallicRoughnessTexture.Sample(ModelSampler, uv).r;

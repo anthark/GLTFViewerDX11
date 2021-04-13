@@ -18,7 +18,7 @@ public:
     enum class SETTINGS_SCENE_MODE
     {
         MODEL = 0,
-        SPHERES
+        SPHERE
     };
 
     Settings(const std::shared_ptr<DeviceResources>& deviceResources);
@@ -34,6 +34,8 @@ public:
     DirectX::XMFLOAT4 GetLightAttenuation(UINT index) const;
 
     DirectX::XMFLOAT4 GetAlbedo() const { return DirectX::XMFLOAT4(m_albedo); };
+    FLOAT GetMetalness() const { return m_metalRough[0]; };
+    FLOAT GetRoughness() const { return m_metalRough[1]; };
 
     void Render();
 
@@ -51,4 +53,5 @@ private:
     float m_lightsAttenuations[NUM_LIGHTS][3];
     
     float m_albedo[4] = { 0.25f, 1.0f, 1.0f, 1.0f };
+    float m_metalRough[2];
 };

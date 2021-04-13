@@ -16,7 +16,8 @@ Settings::Settings(const std::shared_ptr<DeviceResources>& deviceResources) :
     m_lightsPhiAngles(),
     m_lightsDistances(),
     m_lightsColors(),
-    m_lightsAttenuations()
+    m_lightsAttenuations(),
+    m_metalRough()
 {
     for (UINT i = 0; i < NUM_LIGHTS; ++i)
     {
@@ -44,23 +45,21 @@ void Settings::Render()
     ImGui::NewFrame();
 
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
-    ImGui::SetNextWindowSize(ImVec2(410, 110), ImGuiCond_Once);
+    ImGui::SetNextWindowSize(ImVec2(410, 90), ImGuiCond_Once);
 
     ImGui::Begin("Settings");
 
     static const char* shaderModes[] = { "Regular", "Normal distribution", "Geometry", "Fresnel" };
     ImGui::Combo("Shader mode", reinterpret_cast<int*>(&m_shaderMode), shaderModes, IM_ARRAYSIZE(shaderModes));
 
-    static const char* sceneModes[] = { "Model", "Spheres" };
+    static const char* sceneModes[] = { "Model", "Sphere" };
     ImGui::Combo("Scene content", reinterpret_cast<int*>(&m_sceneMode), sceneModes, IM_ARRAYSIZE(sceneModes));
-
-    ImGui::ColorEdit3("Albedo", m_albedo);
 
     ImGui::End();
 
     for (UINT i = 0; i < NUM_LIGHTS; ++i)
     {
-        ImGui::SetNextWindowPos(ImVec2(0, 110 + 175 * static_cast<float>(i)), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(0, 90 + 175 * static_cast<float>(i)), ImGuiCond_Once);
         ImGui::SetNextWindowSize(ImVec2(410, 175), ImGuiCond_Once);
 
         ImGui::Begin((std::string("Light ") + std::to_string(i)).c_str());
@@ -76,6 +75,22 @@ void Settings::Render()
         ImGui::SliderFloat("Strength", m_lightsStrengths + i, 0.0f, 500.0f);
 
         ImGui::SliderFloat3("Attenuation", m_lightsAttenuations[i], 0.001f, 1.0f);
+
+        ImGui::End();
+    }
+
+    if (m_sceneMode == SETTINGS_SCENE_MODE::SPHERE)
+    {
+        ImGui::SetNextWindowPos(ImVec2(0, 90 + 175 * NUM_LIGHTS), ImGuiCond_Once);
+        ImGui::SetNextWindowSize(ImVec2(410, 100), ImGuiCond_Once);
+
+        ImGui::Begin("Material");
+
+        ImGui::SliderFloat("Metalness", m_metalRough, 0.0f, 1.0f);
+
+        ImGui::SliderFloat("Roughness", m_metalRough + 1, 0.0f, 1.0f);
+
+        ImGui::ColorEdit3("Albedo", m_albedo);
 
         ImGui::End();
     }
