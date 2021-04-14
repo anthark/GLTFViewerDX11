@@ -429,8 +429,10 @@ HRESULT Renderer::CreatePrefilteredColorTexture()
 {
     HRESULT hr = S_OK;
 
-    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32G32B32A32_FLOAT, prefilteredColorSize, prefilteredColorSize, 6, 5, D3D11_BIND_SHADER_RESOURCE,
-        D3D11_USAGE_DEFAULT, 0, 1, 0, D3D11_RESOURCE_MISC_TEXTURECUBE);
+    float roughness[5] = { 0.0f, 0.25f, 0.5f, 0.75f, 1.0f };
+
+    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32G32B32A32_FLOAT, prefilteredColorSize, prefilteredColorSize, 6, ARRAYSIZE(roughness),
+        D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DEFAULT, 0, 1, 0, D3D11_RESOURCE_MISC_TEXTURECUBE);
     hr = m_pDeviceResources->GetDevice()->CreateTexture2D(&td, nullptr, &m_pPrefilteredColorTexture);
     if (FAILED(hr))
         return hr;
@@ -439,7 +441,7 @@ HRESULT Renderer::CreatePrefilteredColorTexture()
     context->PSSetConstantBuffers(1, 1, m_pMaterialBuffer.GetAddressOf());
     for (UINT i = 0; i < td.MipLevels; ++i)
     {
-        m_materialBufferData.Roughness = 0.25f * i;
+        m_materialBufferData.Roughness = roughness[i];
         context->UpdateSubresource(m_pMaterialBuffer.Get(), 0, nullptr, &m_materialBufferData, 0, 0);
 
         hr = CreateCubeTextureFromResource(prefilteredColorSize / (UINT)pow(2, i), m_pPrefilteredColorTexture.Get(), m_pEnvironmentCubeShaderResourceView.Get(),

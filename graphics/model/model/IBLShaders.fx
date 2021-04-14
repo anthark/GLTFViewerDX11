@@ -19,10 +19,9 @@ cbuffer Transformation : register(b0)
 
 cbuffer Material : register(b1)
 {
-    float3 Albedo;
+    float4 Albedo;
     float Roughness;
     float Metalness;
-    float3 MetalF0;
 }
 
 struct VS_INPUT
@@ -33,14 +32,13 @@ struct VS_INPUT
 struct PS_INPUT
 {
     float4 Pos : SV_POSITION;
-    float3 Tex : TEXCOORD;
+    float3 Tex : POSITION;
 };
 
 PS_INPUT vs_main(VS_INPUT input)
 {
     PS_INPUT output = (PS_INPUT) 0;
     output.Pos = float4(input.Pos, 1.0f);
-    output.Pos = mul(output.Pos, World);
     output.Pos = mul(output.Pos, View);
     output.Pos = mul(output.Pos, Projection);
     output.Tex = input.Pos;
@@ -135,7 +133,7 @@ float3 PrefilteredColor(float3 norm)
         float mipLevel = Roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel);
         if (ndotl > 0.0)
         {
-            prefilteredColor += cubeTexture.SampleLevel(MinMagMipLinear, L, mipLevel).xyz * ndotl;
+            prefilteredColor += cubeTexture.SampleLevel(MinMagMipLinear, L, mipLevel).rgb * ndotl;
             totalWeight += ndotl;
         }
     }
@@ -145,8 +143,6 @@ float3 PrefilteredColor(float3 norm)
 
 float4 cps_main(PS_INPUT input) : SV_TARGET
 {
-    if (Roughness < 0.1f)
-        return float4(cubeTexture.Sample(MinMagMipLinear, normalize(input.Tex)).xyz, 1.0f);
     return float4(PrefilteredColor(normalize(input.Tex)), 1.0f);
 }
 
