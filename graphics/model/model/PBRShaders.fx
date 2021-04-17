@@ -13,7 +13,7 @@ SamplerState MinMagLinearMipPointClamp : register(s1);
 SamplerState ModelSampler : register(s2);
 
 static const float PI = 3.14159265358979323846f;
-static const float MAX_REFLECTION_LOD = 4.0;
+static const float MAX_REFLECTION_LOD = 4.0f;
 
 cbuffer Transformation: register(b0)
 {
@@ -144,7 +144,7 @@ float3 LO_i(float3 p, float3 n, float3 v, uint lightIndex, float3 pos, float3 al
 
 float3 FresnelSchlickRoughnessFunction(float3 F0, float3 n, float3 v, float roughness)
 {
-    return (F0 + (max(1 - roughness, F0) - F0) * pow(1 - max(dot(n, v), 0), 5));
+    return F0 + (max(1 - roughness, F0) - F0) * pow(1 - max(dot(n, v), 0), 5);
 }
 
 float3 Ambient(float3 n, float3 v, float3 albedo, float metalness, float roughness)
@@ -196,7 +196,7 @@ float4 ps_main(PS_INPUT input) : SV_TARGET
     float3 nm = (normalTexture.Sample(ModelSampler, input.Tex) * 2.0f - 1.0f).xyz;
     float3 tangent = normalize(input.Tangent);
     float3 binormal = cross(n, tangent);
-    n = normalize(nm.x * tangent + nm.y * binormal + input.Normal);
+    n = normalize(nm.x * tangent + nm.y * binormal + n);
 #endif
 
 #ifdef DOUBLE_SIDED

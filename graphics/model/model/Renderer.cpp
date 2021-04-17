@@ -450,7 +450,7 @@ HRESULT Renderer::CreatePrefilteredColorTexture()
             return hr;
     }
 
-    D3D11_SHADER_RESOURCE_VIEW_DESC srvd = CD3D11_SHADER_RESOURCE_VIEW_DESC(D3D11_SRV_DIMENSION_TEXTURECUBE, td.Format, 0, 1);
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvd = CD3D11_SHADER_RESOURCE_VIEW_DESC(D3D11_SRV_DIMENSION_TEXTURECUBE, td.Format, 0, td.MipLevels);
     hr = m_pDeviceResources->GetDevice()->CreateShaderResourceView(m_pPrefilteredColorTexture.Get(), &srvd, &m_pPrefilteredColorShaderResourceView);
 
     return hr;

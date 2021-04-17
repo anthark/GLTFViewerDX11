@@ -499,6 +499,9 @@
   <ItemGroup>
     <Image Include="env.hdr" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="car_scene\scene.gltf" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
