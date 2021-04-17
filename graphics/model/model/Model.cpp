@@ -32,7 +32,7 @@ HRESULT Model::CreateDeviceDependentResources(ID3D11Device* device)
     if (FAILED(hr))
         return hr;
 
-    m_pPixelShaders.resize(32);
+    m_pPixelShaders.resize(16);
 
     hr = CreateTextures(device, model);
     if (FAILED(hr))
@@ -222,9 +222,6 @@ HRESULT Model::CreateMaterials(ID3D11Device* device, tinygltf::Model& model)
 
         if (gltfMaterial.occlusionTexture.index >= 0)
             material.pixelShaderDefinesFlags |= MATERIAL_HAS_OCCLUSION_TEXTURE;
-
-        if (gltfMaterial.doubleSided)
-            material.pixelShaderDefinesFlags |= MATERIAL_DOUBLE_SIDED;
 
         hr = CreatePixelShader(device, material.pixelShaderDefinesFlags);
         if (FAILED(hr))
@@ -507,9 +504,6 @@ HRESULT Model::CreatePixelShader(ID3D11Device* device, UINT definesFlags)
 
     if (definesFlags & MATERIAL_HAS_OCCLUSION_TEXTURE)
         defines.push_back({ "HAS_OCCLUSION_TEXTURE", "1" });
-
-    if (definesFlags & MATERIAL_DOUBLE_SIDED)
-        defines.push_back({ "DOUBLE_SIDED", "1" });
 
     defines.push_back({ nullptr, nullptr });
 

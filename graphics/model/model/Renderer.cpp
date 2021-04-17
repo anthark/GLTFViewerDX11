@@ -810,7 +810,6 @@ void Renderer::RenderModel()
     m_pModel->RenderEmissive(context, m_constantBufferData, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots);
     
     context->OMSetRenderTargets(1, &renderTarget, m_pDeviceResources->GetDepthStencil());
-    context->OMSetDepthStencilState(m_pDeviceResources->GetTransDepthStencil(), 0);
     m_pModel->RenderTransparent(context, m_constantBufferData, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots, m_pCamera->GetDirection());
 
     context->OMSetRenderTargets(1, &bloomRenderTarget, m_pDeviceResources->GetDepthStencil());

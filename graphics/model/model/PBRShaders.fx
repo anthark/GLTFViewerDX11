@@ -68,7 +68,9 @@ PS_INPUT vs_main(VS_INPUT input)
     output.Tex = input.Tex;
     output.Normal = normalize(mul(input.Normal, (float3x3)World));
 #ifdef HAS_TANGENT
-    output.Tangent = normalize(mul(input.Tangent, World).xyz);
+    output.Tangent = input.Tangent.xyz;
+    if (length(input.Tangent.xyz) > 0)
+        output.Tangent = normalize(mul(input.Tangent.xyz, (float3x3)World));
 #endif
     return output;
 }
@@ -194,14 +196,11 @@ float4 ps_main(PS_INPUT input) : SV_TARGET
 #else
 #ifdef HAS_NORMAL_TEXTURE
     float3 nm = (normalTexture.Sample(ModelSampler, input.Tex) * 2.0f - 1.0f).xyz;
-    float3 tangent = normalize(input.Tangent);
+    float3 tangent = input.Tangent;
+    if (length(input.Tangent) > 0)
+        tangent = normalize(input.Tangent);
     float3 binormal = cross(n, tangent);
     n = normalize(nm.x * tangent + nm.y * binormal + n);
-#endif
-
-#ifdef DOUBLE_SIDED
-    if (dot(-v, n) > 0.0f)
-        n = -n;
 #endif
 
     float2 material = GetMetalnessRoughness(input.Tex);
