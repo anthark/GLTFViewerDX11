@@ -444,7 +444,7 @@ HRESULT Model::CreateShaders(ID3D11Device* device)
 #ifdef ENV64
     hr = CompileShaderFromFile(L"../../model/PBRShaders.fx", "vs_main", "vs_5_0", &blob, defines.data());
 #else
-    hr = CompileShaderFromFile(L"../model/PBRShaders.fx", "vs_main", "vs_5_0", &blob, defines);
+    hr = CompileShaderFromFile(L"../model/PBRShaders.fx", "vs_main", "vs_5_0", &blob, defines.data());
 #endif
     if (FAILED(hr))
         return hr;
@@ -472,7 +472,7 @@ HRESULT Model::CreateShaders(ID3D11Device* device)
 #ifdef ENV64
     hr = CompileShaderFromFile(L"../../model/PBRShaders.fx", "ps_main", "ps_5_0", &blob, defines.data());
 #else
-    hr = CompileShaderFromFile(L"../model/PBRShaders.fx", "ps_main", "ps_5_0", &blob, defines);
+    hr = CompileShaderFromFile(L"../model/PBRShaders.fx", "ps_main", "ps_5_0", &blob, defines.data());
 #endif
     if (FAILED(hr))
         return hr;
@@ -510,7 +510,7 @@ HRESULT Model::CreatePixelShader(ID3D11Device* device, UINT definesFlags)
 #ifdef ENV64
     hr = CompileShaderFromFile(L"../../model/PBRShaders.fx", "ps_main", "ps_5_0", &blob, defines.data());
 #else
-    hr = CompileShaderFromFile(L"../model/PBRShaders.fx", "ps_main", "ps_5_0", &blob, defines);
+    hr = CompileShaderFromFile(L"../model/PBRShaders.fx", "ps_main", "ps_5_0", &blob, defines.data());
 #endif
     if (FAILED(hr))
         return hr;
