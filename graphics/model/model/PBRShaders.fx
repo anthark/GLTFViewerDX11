@@ -166,7 +166,7 @@ float4 GetAlbedo(float2 uv)
 {
     float4 albedo = Albedo;
 #ifdef HAS_COLOR_TEXTURE
-    albedo *= pow(diffuseTexture.Sample(ModelSampler, uv), 2.2f);
+    albedo *= diffuseTexture.Sample(ModelSampler, uv);
 #else
     albedo = pow(albedo, 2.2f);
 #endif

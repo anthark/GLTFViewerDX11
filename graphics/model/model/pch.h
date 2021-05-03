@@ -4,10 +4,6 @@
 #define UNICODE
 #endif
 
-#ifdef _WIN64
-#define ENV64
-#endif
-
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <wrl/client.h>
@@ -20,3 +16,12 @@
 
 #include <string>
 #include <memory>
+
+#ifdef _WIN64
+#define ENV64
+const std::string srcPath = std::string("../../model/");
+const std::wstring wsrcPath = std::wstring(L"../../model/");
+#else
+const std::string srcPath = std::string("../model/");
+const std::wstring wsrcPath = std::wstring(L"../model/");
+#endif

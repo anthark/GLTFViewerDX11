@@ -3,11 +3,7 @@
 #include "ShaderStructures.h"
 #include "../../tiny_gltf.h"
 
-#ifdef ENV64
-const std::string modelsPath = std::string("../../model/");
-#else
-const std::string modelsPath = std::string("../model/");
-#endif
+const std::string modelsPath = srcPath + "../../models/";
 
 class Model
 {
@@ -76,7 +72,7 @@ private:
         UINT matrix;
     };
 
-    HRESULT CreateTextures(ID3D11Device* device, tinygltf::Model& model);
+    HRESULT CreateTexture(ID3D11Device* device, tinygltf::Model& model, size_t imageIdx, bool useSRGB=false);
     HRESULT CreateSamplerState(ID3D11Device* device, tinygltf::Model& model);
     HRESULT CreateMaterials(ID3D11Device* device, tinygltf::Model& model);
     HRESULT CreatePrimitives(ID3D11Device* device, tinygltf::Model& model);
@@ -94,7 +90,6 @@ private:
     Microsoft::WRL::ComPtr<ID3D11PixelShader>  m_pEmissivePixelShader;
 
     std::vector<Microsoft::WRL::ComPtr<ID3D11PixelShader>>        m_pPixelShaders;
-    std::vector<Microsoft::WRL::ComPtr<ID3D11Texture2D>>          m_pTextures;
     std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> m_pShaderResourceViews;
     
     Microsoft::WRL::ComPtr<ID3D11SamplerState> m_pSamplerState;

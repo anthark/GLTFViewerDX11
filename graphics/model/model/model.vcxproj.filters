@@ -257,7 +257,7 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="car_scene\scene.gltf">
+    <None Include="..\..\models\car_scene\scene.gltf">
       <Filter>Файлы ресурсов</Filter>
     </None>
   </ItemGroup>

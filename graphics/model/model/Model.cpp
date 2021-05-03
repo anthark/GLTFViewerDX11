@@ -34,9 +34,7 @@ HRESULT Model::CreateDeviceDependentResources(ID3D11Device* device)
 
     m_pPixelShaders.resize(16);
 
-    hr = CreateTextures(device, model);
-    if (FAILED(hr))
-        return hr;
+    m_pShaderResourceViews.resize(model.images.size());
 
     hr = CreateSamplerState(device, model);
     if (FAILED(hr))
@@ -51,30 +49,32 @@ HRESULT Model::CreateDeviceDependentResources(ID3D11Device* device)
     return hr;
 }
 
-HRESULT Model::CreateTextures(ID3D11Device* device, tinygltf::Model& model)
+HRESULT Model::CreateTexture(ID3D11Device* device, tinygltf::Model& model, size_t imageIdx, bool useSRGB)
 {
     // All images have 8 bits per channel and 4 components
     HRESULT hr = S_OK;
 
-    for (tinygltf::Image& gltfImage : model.images)
-    {
-        Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
-        CD3D11_TEXTURE2D_DESC td(DXGI_FORMAT_R8G8B8A8_UNORM, gltfImage.width, gltfImage.height, 1, 1, D3D11_BIND_SHADER_RESOURCE);
-        D3D11_SUBRESOURCE_DATA initData;
-        initData.pSysMem = gltfImage.image.data();
-        initData.SysMemPitch = 4 * gltfImage.width;
-        hr = device->CreateTexture2D(&td, &initData, &texture);
-        if (FAILED(hr))
-            return hr;
-        m_pTextures.push_back(texture);
+    if (m_pShaderResourceViews[imageIdx])
+        return hr;
 
-        Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> shaderResource;
-        CD3D11_SHADER_RESOURCE_VIEW_DESC srvd(D3D11_SRV_DIMENSION_TEXTURE2D, td.Format);
-        hr = device->CreateShaderResourceView(texture.Get(), &srvd, &shaderResource);
-        if (FAILED(hr))
-            return hr;
-        m_pShaderResourceViews.push_back(shaderResource);
-    }
+    tinygltf::Image& gltfImage = model.images[imageIdx];
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+    DXGI_FORMAT format = useSRGB ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
+    CD3D11_TEXTURE2D_DESC td(format, gltfImage.width, gltfImage.height, 1, 1, D3D11_BIND_SHADER_RESOURCE);
+    D3D11_SUBRESOURCE_DATA initData;
+    initData.pSysMem = gltfImage.image.data();
+    initData.SysMemPitch = 4 * gltfImage.width;
+    hr = device->CreateTexture2D(&td, &initData, &texture);
+    if (FAILED(hr))
+        return hr;
+
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> shaderResource;
+    CD3D11_SHADER_RESOURCE_VIEW_DESC srvd(D3D11_SRV_DIMENSION_TEXTURE2D, td.Format);
+    hr = device->CreateShaderResourceView(texture.Get(), &srvd, &shaderResource);
+    if (FAILED(hr))
+        return hr;
+    m_pShaderResourceViews[imageIdx] = shaderResource;
 
     return hr;
 }
@@ -210,15 +210,30 @@ HRESULT Model::CreateMaterials(ID3D11Device* device, tinygltf::Model& model)
 
         material.baseColorTexture = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
         if (material.baseColorTexture >= 0)
+        {
             material.pixelShaderDefinesFlags |= MATERIAL_HAS_COLOR_TEXTURE;
+            hr = CreateTexture(device, model, material.baseColorTexture, true);
+            if (FAILED(hr))
+                return hr;
+        }
 
         material.metallicRoughnessTexture = gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
         if (material.metallicRoughnessTexture >= 0)
+        {
             material.pixelShaderDefinesFlags |= MATERIAL_HAS_METAL_ROUGH_TEXTURE;
+            hr = CreateTexture(device, model, material.metallicRoughnessTexture);
+            if (FAILED(hr))
+                return hr;
+        }
 
         material.normalTexture = gltfMaterial.normalTexture.index;
         if (material.normalTexture >= 0)
+        {
             material.pixelShaderDefinesFlags |= MATERIAL_HAS_NORMAL_TEXTURE;
+            hr = CreateTexture(device, model, material.normalTexture);
+            if (FAILED(hr))
+                return hr;
+        }
 
         if (gltfMaterial.occlusionTexture.index >= 0)
             material.pixelShaderDefinesFlags |= MATERIAL_HAS_OCCLUSION_TEXTURE;
@@ -228,6 +243,12 @@ HRESULT Model::CreateMaterials(ID3D11Device* device, tinygltf::Model& model)
             return hr;
 
         material.emissiveTexture = gltfMaterial.emissiveTexture.index;
+        if (material.emissiveTexture >= 0)
+        {
+            hr = CreateTexture(device, model, material.emissiveTexture, true);
+            if (FAILED(hr))
+                return hr;
+        }
 
         m_materials.push_back(material);
     }
@@ -441,11 +462,7 @@ HRESULT Model::CreateShaders(ID3D11Device* device)
     defines.push_back({ "HAS_TANGENT", "1" });
     defines.push_back({ nullptr, nullptr });
 
-#ifdef ENV64
-    hr = CompileShaderFromFile(L"../../model/PBRShaders.fx", "vs_main", "vs_5_0", &blob, defines.data());
-#else
-    hr = CompileShaderFromFile(L"../model/PBRShaders.fx", "vs_main", "vs_5_0", &blob, defines.data());
-#endif
+    hr = CompileShaderFromFile((wsrcPath + L"PBRShaders.fx").c_str(), "vs_main", "vs_5_0", &blob, defines.data());
     if (FAILED(hr))
         return hr;
 
@@ -469,11 +486,7 @@ HRESULT Model::CreateShaders(ID3D11Device* device)
     defines.push_back({ "HAS_EMISSIVE", "1" });
     defines.push_back({ nullptr, nullptr });
 
-#ifdef ENV64
-    hr = CompileShaderFromFile(L"../../model/PBRShaders.fx", "ps_main", "ps_5_0", &blob, defines.data());
-#else
-    hr = CompileShaderFromFile(L"../model/PBRShaders.fx", "ps_main", "ps_5_0", &blob, defines.data());
-#endif
+    hr = CompileShaderFromFile((wsrcPath + L"PBRShaders.fx").c_str(), "ps_main", "ps_5_0", &blob, defines.data());
     if (FAILED(hr))
         return hr;
 
@@ -507,11 +520,7 @@ HRESULT Model::CreatePixelShader(ID3D11Device* device, UINT definesFlags)
 
     defines.push_back({ nullptr, nullptr });
 
-#ifdef ENV64
-    hr = CompileShaderFromFile(L"../../model/PBRShaders.fx", "ps_main", "ps_5_0", &blob, defines.data());
-#else
-    hr = CompileShaderFromFile(L"../model/PBRShaders.fx", "ps_main", "ps_5_0", &blob, defines.data());
-#endif
+    hr = CompileShaderFromFile((wsrcPath + L"PBRShaders.fx").c_str(), "ps_main", "ps_5_0", &blob, defines.data());
     if (FAILED(hr))
         return hr;
 
