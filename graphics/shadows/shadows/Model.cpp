@@ -338,8 +338,9 @@ HRESULT Model::CreatePrimitive(ID3D11Device* device, tinygltf::Model& model, tin
             DirectX::XMFLOAT3 maxPosition(static_cast<float>(gltfAccessor.maxValues[0]), static_cast<float>(gltfAccessor.maxValues[1]), static_cast<float>(gltfAccessor.maxValues[2]));
             DirectX::XMFLOAT3 minPosition(static_cast<float>(gltfAccessor.minValues[0]), static_cast<float>(gltfAccessor.minValues[1]), static_cast<float>(gltfAccessor.minValues[2]));
 
-            primitive.max = DirectX::XMVector3Transform(DirectX::XMLoadFloat3(&maxPosition), m_worldMatricies[primitive.matrix]);
-            primitive.min = DirectX::XMVector3Transform(DirectX::XMLoadFloat3(&minPosition), m_worldMatricies[primitive.matrix]);
+            DirectX::XMMATRIX world = DirectX::XMMatrixMultiply(m_worldMatricies[primitive.matrix], m_globalWorldMatrix);
+            primitive.max = DirectX::XMVector3Transform(DirectX::XMLoadFloat3(&maxPosition), world);
+            primitive.min = DirectX::XMVector3Transform(DirectX::XMLoadFloat3(&minPosition), world);
         }
     }
 
@@ -462,7 +463,7 @@ HRESULT Model::CreatePrimitives(ID3D11Device* device, tinygltf::Model& model)
     return hr;
 }
 
-void Model::Render(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots)
+void Model::Render(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots, bool emissive)
 {
     context->VSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
     context->PSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
@@ -470,8 +471,9 @@ void Model::Render(ID3D11DeviceContext* context, WorldViewProjectionConstantBuff
     context->PSSetSamplers(slots.samplerStateSlot, 1, m_pSamplerState.GetAddressOf());
 
     transformationData.World = DirectX::XMMatrixIdentity();
-    for (Primitive& primitive : m_primitives)
-        RenderPrimitive(primitive, context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots);
+    std::vector<Primitive>& primitives = emissive ? m_emissivePrimitives : m_primitives;
+    for (Primitive& primitive : primitives)
+        RenderPrimitive(primitive, context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots, emissive);
 }
 
 bool CompareDistancePairs(const std::pair<float, size_t>& p1, const std::pair<float, size_t>& p2)
@@ -479,7 +481,7 @@ bool CompareDistancePairs(const std::pair<float, size_t>& p1, const std::pair<fl
     return p1.first < p2.first;
 }
 
-void Model::RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots, DirectX::XMVECTOR cameraDir)
+void Model::RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots, DirectX::XMVECTOR cameraDir, bool emissive)
 {
     context->VSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
     context->PSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
@@ -487,14 +489,16 @@ void Model::RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionC
     context->PSSetSamplers(slots.samplerStateSlot, 1, m_pSamplerState.GetAddressOf());
 
     transformationData.World = DirectX::XMMatrixIdentity();
+
+    std::vector<Primitive>& primitives = emissive ? m_emissiveTransparentPrimitives : m_transparentPrimitives;
     
     std::vector<std::pair<float, size_t>> distances;
     float distance;
     DirectX::XMVECTOR center;
     DirectX::XMVECTOR cameraPos = DirectX::XMLoadFloat4(&transformationData.CameraPos);
-    for (size_t i = 0; i < m_transparentPrimitives.size(); ++i)
+    for (size_t i = 0; i < primitives.size(); ++i)
     {
-        center = DirectX::XMVectorDivide(DirectX::XMVectorAdd(m_transparentPrimitives[i].max, m_transparentPrimitives[i].min), DirectX::XMVectorReplicate(2));
+        center = DirectX::XMVectorDivide(DirectX::XMVectorAdd(primitives[i].max, primitives[i].min), DirectX::XMVectorReplicate(2));
         distance = DirectX::XMVector3Dot(DirectX::XMVectorSubtract(center, cameraPos), cameraDir).m128_f32[0];
         distances.push_back(std::pair<float, size_t>(distance, i));
     }
@@ -502,7 +506,7 @@ void Model::RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionC
     std::sort(distances.begin(), distances.end(), CompareDistancePairs);
 
     for (auto iter = distances.rbegin(); iter != distances.rend(); ++iter)
-        RenderPrimitive(m_transparentPrimitives[(*iter).second], context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots);
+        RenderPrimitive(primitives[(*iter).second], context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots, emissive);
 }
 
 void Model::RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer& transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots& slots, bool emissive)
@@ -560,44 +564,6 @@ void Model::RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, 
 
     if (material.blend)
         context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
-}
-
-void Model::RenderEmissive(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots)
-{
-    context->VSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
-    context->PSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
-    context->PSSetConstantBuffers(slots.materialConstantBufferSlot, 1, &materialConstantBuffer);
-    context->PSSetSamplers(slots.samplerStateSlot, 1, m_pSamplerState.GetAddressOf());
-
-    transformationData.World = DirectX::XMMatrixIdentity();
-    for (Primitive& primitive : m_emissivePrimitives)
-        RenderPrimitive(primitive, context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots, true);
-}
-
-void Model::RenderEmissiveTransparent(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots, DirectX::XMVECTOR cameraDir)
-{
-    context->VSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
-    context->PSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
-    context->PSSetConstantBuffers(slots.materialConstantBufferSlot, 1, &materialConstantBuffer);
-    context->PSSetSamplers(slots.samplerStateSlot, 1, m_pSamplerState.GetAddressOf());
-
-    transformationData.World = DirectX::XMMatrixIdentity();
-
-    std::vector<std::pair<float, size_t>> distances;
-    float distance;
-    DirectX::XMVECTOR center;
-    DirectX::XMVECTOR cameraPos = DirectX::XMLoadFloat4(&transformationData.CameraPos);
-    for (size_t i = 0; i < m_emissiveTransparentPrimitives.size(); ++i)
-    {
-        center = DirectX::XMVectorDivide(DirectX::XMVectorAdd(m_emissiveTransparentPrimitives[i].max, m_emissiveTransparentPrimitives[i].min), DirectX::XMVectorReplicate(2));
-        distance = DirectX::XMVector3Dot(DirectX::XMVectorSubtract(center, cameraPos), cameraDir).m128_f32[0];
-        distances.push_back(std::pair<float, size_t>(distance, i));
-    }
-
-    std::sort(distances.begin(), distances.end(), CompareDistancePairs);
-
-    for (auto iter = distances.rbegin(); iter != distances.rend(); ++iter)
-        RenderPrimitive(m_emissiveTransparentPrimitives[(*iter).second], context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots, true);
 }
 
 Model::~Model()

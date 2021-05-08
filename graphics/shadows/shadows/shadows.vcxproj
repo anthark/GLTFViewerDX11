@@ -505,6 +505,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\models\car_scene\scene.gltf" />
+    <None Include="..\..\models\msz-006\scene.gltf" />
+    <None Include="..\..\models\red_barn\scene.gltf" />
+    <None Include="..\..\models\spitfire\scene.gltf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

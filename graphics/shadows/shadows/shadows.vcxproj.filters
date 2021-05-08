@@ -272,5 +272,14 @@
     <None Include="..\..\models\car_scene\scene.gltf">
       <Filter>Файлы ресурсов</Filter>
     </None>
+    <None Include="..\..\models\msz-006\scene.gltf">
+      <Filter>Файлы ресурсов</Filter>
+    </None>
+    <None Include="..\..\models\red_barn\scene.gltf">
+      <Filter>Файлы ресурсов</Filter>
+    </None>
+    <None Include="..\..\models\spitfire\scene.gltf">
+      <Filter>Файлы ресурсов</Filter>
+    </None>
   </ItemGroup>
 </Project>

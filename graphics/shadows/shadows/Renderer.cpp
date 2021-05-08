@@ -953,7 +953,7 @@ void Renderer::RenderModels()
     
     context->OMSetRenderTargets(1, &bloomRenderTarget, m_pDeviceResources->GetDepthStencil());
     for (size_t i = 0; i < m_pModels.size(); ++i)
-        m_pModels[i]->RenderEmissive(context, m_constantBufferData, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots);
+        m_pModels[i]->Render(context, m_constantBufferData, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots, true);
     
     context->OMSetRenderTargets(1, &renderTarget, m_pDeviceResources->GetDepthStencil());
     for (size_t i = 0; i < m_pModels.size(); ++i)
@@ -962,7 +962,7 @@ void Renderer::RenderModels()
     context->OMSetRenderTargets(1, &bloomRenderTarget, m_pDeviceResources->GetDepthStencil());
     context->OMSetDepthStencilState(m_pDeviceResources->GetTransDepthStencil(), 0);
     for (size_t i = 0; i < m_pModels.size(); ++i)
-        m_pModels[i]->RenderEmissiveTransparent(context, m_constantBufferData, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots, m_pCamera->GetDirection());
+        m_pModels[i]->RenderTransparent(context, m_constantBufferData, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots, m_pCamera->GetDirection(), true);
 
     ID3D11ShaderResourceView* nullsrv[] = { nullptr };
     context->PSSetShaderResources(0, 1, nullsrv);
