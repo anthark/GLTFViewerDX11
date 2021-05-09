@@ -19,13 +19,13 @@ public:
         UINT materialConstantBufferSlot;
     };
 
-    Model(const char* modelPath, const std::shared_ptr<ModelShaders>& modelShaders, DirectX::XMMATRIX globalWorldMatrix=DirectX::XMMatrixIdentity());
+    Model(const char* modelPath, const std::shared_ptr<ModelShaders>& modelShaders, DirectX::XMMATRIX globalWorldMatrix = DirectX::XMMatrixIdentity());
     ~Model();
 
     HRESULT CreateDeviceDependentResources(ID3D11Device* device);    
 
-    void Render(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots, bool emissive=false);
-    void RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots, DirectX::XMVECTOR cameraDir, bool emissive=false);
+    void Render(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots, bool emissive = false, bool usePS = true);
+    void RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots, DirectX::XMVECTOR cameraDir, bool emissive = false, bool usePS = true);
 
 private:
     struct Material
@@ -69,7 +69,7 @@ private:
     HRESULT ProcessNode(ID3D11Device* device, tinygltf::Model& model, int node, DirectX::XMMATRIX worldMatrix);
     HRESULT CreatePrimitive(ID3D11Device* device, tinygltf::Model& model, tinygltf::Primitive& gltfPrimitive, UINT matrix);
     
-    void RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer& transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots& slots, bool emissive=false);
+    void RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer& transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots& slots, bool emissive = false, bool usePS = true);
 
     std::string m_modelPath;
 

@@ -37,6 +37,10 @@ public:
     FLOAT GetMetalness() const { return m_metalRough[0]; };
     FLOAT GetRoughness() const { return m_metalRough[1]; };
 
+    INT GetDepthBias() const { return m_depthBias; };
+    FLOAT GetSlopeScaledDepthBias() const { return m_slopeScaledDepthBias; };
+    bool GetShadowPCFUsing() const { return m_useShadowPCF; };
+
     void Render();
 
 private:
@@ -54,4 +58,8 @@ private:
     
     float m_albedo[4] = { 0.25f, 1.0f, 1.0f, 1.0f };
     float m_metalRough[2];
+
+    int   m_depthBias;
+    float m_slopeScaledDepthBias;
+    bool  m_useShadowPCF;
 };

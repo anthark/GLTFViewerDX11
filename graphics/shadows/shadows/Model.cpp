@@ -463,7 +463,7 @@ HRESULT Model::CreatePrimitives(ID3D11Device* device, tinygltf::Model& model)
     return hr;
 }
 
-void Model::Render(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots, bool emissive)
+void Model::Render(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots, bool emissive, bool usePS)
 {
     context->VSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
     context->PSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
@@ -473,7 +473,7 @@ void Model::Render(ID3D11DeviceContext* context, WorldViewProjectionConstantBuff
     transformationData.World = DirectX::XMMatrixIdentity();
     std::vector<Primitive>& primitives = emissive ? m_emissivePrimitives : m_primitives;
     for (Primitive& primitive : primitives)
-        RenderPrimitive(primitive, context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots, emissive);
+        RenderPrimitive(primitive, context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots, emissive, usePS);
 }
 
 bool CompareDistancePairs(const std::pair<float, size_t>& p1, const std::pair<float, size_t>& p2)
@@ -481,7 +481,7 @@ bool CompareDistancePairs(const std::pair<float, size_t>& p1, const std::pair<fl
     return p1.first < p2.first;
 }
 
-void Model::RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots, DirectX::XMVECTOR cameraDir, bool emissive)
+void Model::RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots, DirectX::XMVECTOR cameraDir, bool emissive, bool usePS)
 {
     context->VSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
     context->PSSetConstantBuffers(slots.transformationConstantBufferSlot, 1, &transformationConstantBuffer);
@@ -506,10 +506,10 @@ void Model::RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionC
     std::sort(distances.begin(), distances.end(), CompareDistancePairs);
 
     for (auto iter = distances.rbegin(); iter != distances.rend(); ++iter)
-        RenderPrimitive(primitives[(*iter).second], context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots, emissive);
+        RenderPrimitive(primitives[(*iter).second], context, transformationData, transformationConstantBuffer, materialConstantBuffer, slots, emissive, usePS);
 }
 
-void Model::RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer& transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots& slots, bool emissive)
+void Model::RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer& transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots& slots, bool emissive, bool usePS)
 {
     std::vector<ID3D11Buffer*> combined;
     std::vector<UINT> offset;
@@ -532,7 +532,6 @@ void Model::RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, 
     Material& material = m_materials[primitive.material];
     if (material.blend)
         context->OMSetBlendState(material.pBlendState.Get(), nullptr, 0xFFFFFFFF);
-    context->RSSetState(material.pRasterizerState.Get());
 
     context->IASetInputLayout(m_pModelShaders->GetInputLayout());
     context->VSSetShader(m_pModelShaders->GetVertexShader(), nullptr, 0);
@@ -542,22 +541,28 @@ void Model::RenderPrimitive(Primitive& primitive, ID3D11DeviceContext* context, 
     context->UpdateSubresource(transformationConstantBuffer, 0, NULL, &transformationData, 0, 0);
 
     MaterialConstantBuffer materialBufferData = material.materialBufferData;
-    if (emissive)
+    if (usePS)
     {
-        materialBufferData.Albedo = DirectX::XMFLOAT4(1, 1, 1, materialBufferData.Albedo.w);
-        context->PSSetShaderResources(slots.baseColorTextureSlot, 1, m_pShaderResourceViews[material.emissiveTexture].GetAddressOf());
-        context->PSSetShader(m_pModelShaders->GetEmissivePixelShader(), nullptr, 0);
+        if (emissive)
+        {
+            materialBufferData.Albedo = DirectX::XMFLOAT4(1, 1, 1, materialBufferData.Albedo.w);
+            context->PSSetShaderResources(slots.baseColorTextureSlot, 1, m_pShaderResourceViews[material.emissiveTexture].GetAddressOf());
+            context->PSSetShader(m_pModelShaders->GetEmissivePixelShader(), nullptr, 0);
+        }
+        else
+        {
+            context->PSSetShader(m_pModelShaders->GetPixelShader(material.pixelShaderDefinesFlags), nullptr, 0);
+            if (material.baseColorTexture >= 0)
+                context->PSSetShaderResources(slots.baseColorTextureSlot, 1, m_pShaderResourceViews[material.baseColorTexture].GetAddressOf());
+            if (material.metallicRoughnessTexture >= 0)
+                context->PSSetShaderResources(slots.metallicRoughnessTextureSlot, 1, m_pShaderResourceViews[material.metallicRoughnessTexture].GetAddressOf());
+            if (material.normalTexture >= 0)
+                context->PSSetShaderResources(slots.normalTextureSlot, 1, m_pShaderResourceViews[material.normalTexture].GetAddressOf());
+        }
+        context->RSSetState(material.pRasterizerState.Get());
     }
     else
-    {
-        context->PSSetShader(m_pModelShaders->GetPixelShader(material.pixelShaderDefinesFlags), nullptr, 0);
-        if (material.baseColorTexture >= 0)
-            context->PSSetShaderResources(slots.baseColorTextureSlot, 1, m_pShaderResourceViews[material.baseColorTexture].GetAddressOf());
-        if (material.metallicRoughnessTexture >= 0)
-            context->PSSetShaderResources(slots.metallicRoughnessTextureSlot, 1, m_pShaderResourceViews[material.metallicRoughnessTexture].GetAddressOf());
-        if (material.normalTexture >= 0)
-            context->PSSetShaderResources(slots.normalTextureSlot, 1, m_pShaderResourceViews[material.normalTexture].GetAddressOf());
-    }
+        context->PSSetShader(nullptr, nullptr, 0);
     context->UpdateSubresource(materialConstantBuffer, 0, NULL, &material.materialBufferData, 0, 0);
 
     context->DrawIndexed(primitive.indexCount, 0, 0);

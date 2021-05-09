@@ -22,7 +22,7 @@ public:
     LRESULT MouseHandler(UINT uMsg, WPARAM wParam);
 
 private:
-    void Render();
+    HRESULT Render();
 
     HWND m_hWnd;
     POINT m_cursor;

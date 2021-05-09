@@ -17,7 +17,10 @@ Settings::Settings(const std::shared_ptr<DeviceResources>& deviceResources) :
     m_lightsDistances(),
     m_lightsColors(),
     m_lightsAttenuations(),
-    m_metalRough()
+    m_metalRough(),
+    m_depthBias(10),
+    m_slopeScaledDepthBias(2 * sqrt(2.0f)),
+    m_useShadowPCF(true)
 {
     for (UINT i = 0; i < NUM_LIGHTS; ++i)
     {
@@ -26,6 +29,12 @@ Settings::Settings(const std::shared_ptr<DeviceResources>& deviceResources) :
         m_lightsAttenuations[i][1] = 0.1f;
         m_lightsAttenuations[i][2] = 0.01f;
     }
+
+    m_lightsAttenuations[0][2] = 0.001f;
+    m_lightsStrengths[0] = 500.0f;
+    m_lightsThetaAngles[0] = 1.0f;
+    m_lightsPhiAngles[0] = 2.0f;
+    m_lightsDistances[0] = 325.0f;
 };
 
 void Settings::CreateResources(HWND hWnd)
@@ -79,9 +88,22 @@ void Settings::Render()
         ImGui::End();
     }
 
+    ImGui::SetNextWindowPos(ImVec2(0, 90 + 175 * NUM_LIGHTS), ImGuiCond_Once);
+    ImGui::SetNextWindowSize(ImVec2(410, 100), ImGuiCond_Once);
+
+    ImGui::Begin("Shadows");
+
+    ImGui::SliderInt("Depth bias", &m_depthBias, 0, 32);
+
+    ImGui::SliderFloat("Slope scaled depth bias", &m_slopeScaledDepthBias, 0.0f, 10.0f);
+
+    ImGui::Checkbox("Use PCF", &m_useShadowPCF);
+
+    ImGui::End();
+
     if (m_sceneMode == SETTINGS_SCENE_MODE::SPHERE)
     {
-        ImGui::SetNextWindowPos(ImVec2(0, 90 + 175 * NUM_LIGHTS), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(0, 190 + 175 * NUM_LIGHTS), ImGuiCond_Once);
         ImGui::SetNextWindowSize(ImVec2(410, 100), ImGuiCond_Once);
 
         ImGui::Begin("Material");

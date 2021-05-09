@@ -8,12 +8,17 @@ Texture2D<float4> diffuseTexture : register(t3);
 Texture2D<float4> metallicRoughnessTexture : register(t4);
 Texture2D<float4> normalTexture : register(t5);
 
+TextureCube simpleShadowMapTexture : register(t6);
+
 SamplerState MinMagMipLinear : register(s0);
 SamplerState MinMagLinearMipPointClamp : register(s1);
 SamplerState ModelSampler : register(s2);
+SamplerComparisonState MinMagMipLinearLess : register(s3);
 
 static const float PI = 3.14159265358979323846f;
 static const float MAX_REFLECTION_LOD = 4.0f;
+static const float LIGHT_NEAR = 0.1f;
+static const float LIGHT_FAR = 10000.0f;
 
 cbuffer Transformation: register(b0)
 {
@@ -28,6 +33,7 @@ cbuffer Lights : register(b1)
     float4 LightPositions[NUM_LIGHTS];
     float4 LightColors[NUM_LIGHTS];
     float4 LightAttenuations[NUM_LIGHTS];
+    bool UseShadowPCF;
 }
 
 cbuffer Material : register(b2)
@@ -135,13 +141,27 @@ float Attenuation(float3 lightDir, float3 attenuation)
     return 1 / max(factor, 1e-9);
 }
 
+float VectorToDepth(float3 vec)
+{
+    float3 absVec = abs(vec);
+    float localZComp = max(absVec.x, max(absVec.y, absVec.z));
+
+    float normZComp = (LIGHT_FAR + LIGHT_NEAR) / (LIGHT_FAR - LIGHT_NEAR) - (2 * LIGHT_FAR * LIGHT_NEAR) / (LIGHT_FAR - LIGHT_NEAR) / localZComp;
+    return (normZComp + 1.0f) * 0.5f;
+}
+
 float3 LO_i(float3 p, float3 n, float3 v, uint lightIndex, float3 pos, float3 albedo, float metalness, float roughness)
 {
     float3 lightDir = LightPositions[lightIndex].xyz - pos;
     float4 lightColor = LightColors[lightIndex];
     float atten = Attenuation(lightDir, LightAttenuations[lightIndex].xyz);
 	float3 l = normalize(lightDir);
-    return BRDF(p, n, v, l, albedo, metalness, roughness) * lightColor.rgb * atten * max(dot(l, n), 0) * lightColor.a;
+    float shadowFactor = 1;
+    if (UseShadowPCF)
+        shadowFactor = simpleShadowMapTexture.SampleCmpLevelZero(MinMagMipLinearLess, -l, VectorToDepth(-lightDir)).r;
+    else
+        shadowFactor = (simpleShadowMapTexture.Sample(MinMagMipLinear, -l).r > VectorToDepth(-lightDir)) ? 1 : 0;
+    return BRDF(p, n, v, l, albedo, metalness, roughness) * lightColor.rgb * atten * max(dot(l, n), 0) * lightColor.a * shadowFactor;
 }
 
 float3 FresnelSchlickRoughnessFunction(float3 F0, float3 n, float3 v, float roughness)

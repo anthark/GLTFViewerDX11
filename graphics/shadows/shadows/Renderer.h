@@ -20,7 +20,8 @@ public:
     
     HRESULT OnResize();
 
-    void Update();
+    HRESULT Update();
+
     void Render();
 
 private:
@@ -35,14 +36,16 @@ private:
     HRESULT CreatePreintegratedBRDFTexture();
     HRESULT CreateCubeTextureFromResource(UINT size, ID3D11Texture2D* dst, ID3D11ShaderResourceView* src, ID3D11VertexShader* vs, ID3D11PixelShader* ps, UINT mipSlice = 0);
     HRESULT CreateModels();
+    HRESULT CreateShadows();
 
     void UpdatePerspective();
 
     void Clear();
-    void RenderSphere();
+    void RenderSphere(WorldViewProjectionConstantBuffer& transformationData, bool usePS = true);
     void RenderModels();
     void RenderEnvironment();
     void RenderPlane();
+    void RenderSimpleShadow();
     void PostProcessTexture();
 
     std::unique_ptr<RenderTexture>      m_pRenderTexture;
@@ -71,6 +74,11 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pPreintegratedBRDFTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pPreintegratedBRDFShaderResourceView;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pPlaneShaderResourceView;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pDepthSimpleShadowMapTexture;
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilView>   m_pSimpleShadowMapDepthStencilView;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pResourceSimpleShadowMapTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pSimpleShadowMapShaderResourceView;
+    Microsoft::WRL::ComPtr<ID3D11RasterizerState>    m_pSimpleShadowMapRasterizerState;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pPBRVertexShader;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pEnvironmentVertexShader;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pIBLVertexShader;

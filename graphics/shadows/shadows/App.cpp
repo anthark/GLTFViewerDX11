@@ -115,11 +115,16 @@ HRESULT App::CreateDeviceResources()
     return hr;
 }
 
-void App::Render()
+HRESULT App::Render()
 {
+    HRESULT hr = S_OK;
+
     m_pDeviceResources->GetAnnotation()->BeginEvent(L"Start rendering");
 
-    m_pRenderer->Update();
+    hr = m_pRenderer->Update();
+    if (FAILED(hr))
+        return hr;
+
     m_pRenderer->Render();
 
     m_pSettings->Render();
@@ -127,11 +132,14 @@ void App::Render()
     m_pDeviceResources->Present();
 
     m_pDeviceResources->GetAnnotation()->EndEvent();
+
+    return hr;
 }
 
 void App::Run()
 {
     MSG msg = { 0 };
+    HRESULT hr;
     while (WM_QUIT != msg.message)
     {
         if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
@@ -141,7 +149,9 @@ void App::Run()
         }
         else
         {
-            Render();
+            hr = Render();
+            if (FAILED(hr))
+                break;
         }
     }
 }
