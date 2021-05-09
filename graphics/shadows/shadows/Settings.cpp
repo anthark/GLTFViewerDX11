@@ -19,7 +19,7 @@ Settings::Settings(const std::shared_ptr<DeviceResources>& deviceResources) :
     m_lightsAttenuations(),
     m_metalRough(),
     m_depthBias(10),
-    m_slopeScaledDepthBias(2 * sqrt(2.0f)),
+    m_slopeScaledDepthBias(2 * static_cast<float>(sqrt(2))),
     m_useShadowPCF(true)
 {
     for (UINT i = 0; i < NUM_LIGHTS; ++i)

@@ -980,10 +980,8 @@ void Renderer::RenderPlane()
     m_constantBufferData.World = DirectX::XMMatrixIdentity();
     context->UpdateSubresource(m_pConstantBuffer.Get(), 0, NULL, &m_constantBufferData, 0, 0);
 
-    m_materialBufferData.Albedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-    m_materialBufferData.Roughness = 1.0f;
-    m_materialBufferData.Metalness = 0.0f;
-    context->UpdateSubresource(m_pMaterialBuffer.Get(), 0, nullptr, &m_materialBufferData, 0, 0);
+    MaterialConstantBuffer mcb = { DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f, 0.0f };
+    context->UpdateSubresource(m_pMaterialBuffer.Get(), 0, nullptr, &mcb, 0, 0);
 
     // Render plane
     context->VSSetShader(m_pPBRVertexShader.Get(), nullptr, 0);
