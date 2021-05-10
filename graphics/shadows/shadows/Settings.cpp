@@ -73,7 +73,7 @@ void Settings::Render()
 
         ImGui::Begin((std::string("Light ") + std::to_string(i)).c_str());
 
-        ImGui::SliderFloat("Distance", m_lightsDistances + i, 0.0f, 1000.0f);
+        ImGui::SliderFloat("Distance", m_lightsDistances + i, 0.001f, 1000.0f);
 
         ImGui::SliderFloat("Theta", m_lightsThetaAngles + i, 0.0f, static_cast<float>(M_PI));
 

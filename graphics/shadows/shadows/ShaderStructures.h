@@ -22,13 +22,11 @@ struct VertexPosData
 	DirectX::XMFLOAT3 Pos;
 };
 
-__declspec(align(16))
 struct LightConstantBuffer
 {
 	DirectX::XMFLOAT4 LightPosition[NUM_LIGHTS];
 	DirectX::XMFLOAT4 LightColor[NUM_LIGHTS];
 	DirectX::XMFLOAT4 LightAttenuation[NUM_LIGHTS];
-	bool UseShadowPCF;
 };
 
 __declspec(align(16))
@@ -49,4 +47,11 @@ __declspec(align(16))
 struct BlurConstantBuffer
 {
 	DirectX::XMUINT2 ImageSize;
+};
+
+__declspec(align(16))
+struct ShadowConstantBuffer
+{
+	DirectX::XMMATRIX SimpleShadowTransform;
+	bool UseShadowPCF;
 };

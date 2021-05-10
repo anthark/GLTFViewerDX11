@@ -22,10 +22,13 @@ public:
     Model(const char* modelPath, const std::shared_ptr<ModelShaders>& modelShaders, DirectX::XMMATRIX globalWorldMatrix = DirectX::XMMatrixIdentity());
     ~Model();
 
-    HRESULT CreateDeviceDependentResources(ID3D11Device* device);    
+    HRESULT CreateDeviceDependentResources(ID3D11Device* device);
 
     void Render(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots, bool emissive = false, bool usePS = true);
     void RenderTransparent(ID3D11DeviceContext* context, WorldViewProjectionConstantBuffer transformationData, ID3D11Buffer* transformationConstantBuffer, ID3D11Buffer* materialConstantBuffer, ShadersSlots slots, DirectX::XMVECTOR cameraDir, bool emissive = false, bool usePS = true);
+
+    DirectX::XMVECTOR GetMaximumPosition() const { return m_max; };
+    DirectX::XMVECTOR GetMinimumPosition() const { return m_min; };
 
 private:
     struct Material
@@ -89,4 +92,7 @@ private:
     std::vector<Primitive> m_emissiveTransparentPrimitives;
 
     DirectX::XMMATRIX m_globalWorldMatrix;
+
+    DirectX::XMVECTOR m_max;
+    DirectX::XMVECTOR m_min;
 };

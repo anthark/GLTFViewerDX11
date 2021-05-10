@@ -144,13 +144,19 @@ HRESULT Renderer::CreateShaders()
 
     // Create the constant buffer for world-view-projection matrices
     CD3D11_BUFFER_DESC cbd(sizeof(WorldViewProjectionConstantBuffer), D3D11_BIND_CONSTANT_BUFFER);
-    hr = m_pDeviceResources->GetDevice()->CreateBuffer(&cbd, nullptr, &m_pConstantBuffer);
+    hr = device->CreateBuffer(&cbd, nullptr, &m_pConstantBuffer);
     if (FAILED(hr))
         return hr;
 
     // Create the constant buffer for material variables
     CD3D11_BUFFER_DESC cbmd(sizeof(MaterialConstantBuffer), D3D11_BIND_CONSTANT_BUFFER);
-    hr = m_pDeviceResources->GetDevice()->CreateBuffer(&cbmd, nullptr, &m_pMaterialBuffer);
+    hr = device->CreateBuffer(&cbmd, nullptr, &m_pMaterialBuffer);
+    if (FAILED(hr))
+        return hr;
+
+    // Create the constant buffer for shadows variables
+    CD3D11_BUFFER_DESC cbsd(sizeof(ShadowConstantBuffer), D3D11_BIND_CONSTANT_BUFFER);
+    hr = device->CreateBuffer(&cbsd, nullptr, &m_pShadowBuffer);
 
     return hr;
 }
@@ -294,7 +300,7 @@ HRESULT Renderer::CreateTexture()
     if (FAILED(hr))
         return hr;
 
-    m_pSamplerStates.resize(3);
+    m_pSamplerStates.resize(4);
     D3D11_SAMPLER_DESC sd;
     ZeroMemory(&sd, sizeof(sd));
     sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -315,11 +321,14 @@ HRESULT Renderer::CreateTexture()
     if (FAILED(hr))
         return hr;
 
-    sd.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
-    sd.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-    sd.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-    sd.ComparisonFunc = D3D11_COMPARISON_LESS;
+    sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
     hr = device->CreateSamplerState(&sd, &m_pSamplerStates[2]);
+    if (FAILED(hr))
+        return hr;
+
+    sd.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+    sd.ComparisonFunc = D3D11_COMPARISON_LESS;
+    hr = device->CreateSamplerState(&sd, &m_pSamplerStates[3]);
 
     return hr;
 }
@@ -656,6 +665,24 @@ HRESULT Renderer::CreateModels()
     scale = DirectX::XMMatrixScaling(100, 100, 100);
     m_pModels.push_back(std::unique_ptr<Model>(new Model("red_barn/scene.gltf", m_pModelShaders, DirectX::XMMatrixMultiply(translation, scale))));
     hr = m_pModels[3]->CreateDeviceDependentResources(device);
+    if (FAILED(hr))
+        return hr;
+
+    DirectX::XMVECTOR maxPosition = DirectX::XMVectorSet(-INFINITY, -INFINITY, -INFINITY, 0);
+    DirectX::XMVECTOR minPosition = DirectX::XMVectorSet(INFINITY, INFINITY, INFINITY, 0);
+    for (std::unique_ptr<Model>& model : m_pModels)
+    {
+        DirectX::XMVECTOR maxModel = model->GetMaximumPosition();
+        DirectX::XMVECTOR minModel = model->GetMinimumPosition();
+        for (size_t i = 0; i < 3; ++i)
+        {
+            maxPosition.m128_f32[i] = max(maxPosition.m128_f32[i], maxModel.m128_f32[i]);
+            minPosition.m128_f32[i] = min(minPosition.m128_f32[i], minModel.m128_f32[i]);
+        }
+    }
+
+    m_sceneCenter = DirectX::XMVectorDivide(DirectX::XMVectorAdd(maxPosition, minPosition), DirectX::XMVectorReplicate(2));
+    m_sceneRadius = DirectX::XMVector3Length(DirectX::XMVectorDivide(DirectX::XMVectorSubtract(maxPosition, minPosition), DirectX::XMVectorReplicate(2))).m128_f32[0];
 
     return hr;
 }
@@ -666,24 +693,18 @@ HRESULT Renderer::CreateShadows()
 
     ID3D11Device* device = m_pDeviceResources->GetDevice();
 
-    D3D11_TEXTURE2D_DESC dd = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32_TYPELESS, simpleShadowMapSize, simpleShadowMapSize, 1, 1, D3D11_BIND_DEPTH_STENCIL);
-    hr = device->CreateTexture2D(&dd, nullptr, &m_pDepthSimpleShadowMapTexture);
+    D3D11_TEXTURE2D_DESC dd = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32_TYPELESS, simpleShadowMapSize, simpleShadowMapSize, 1, 1, D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE);
+    hr = device->CreateTexture2D(&dd, nullptr, &m_pSimpleShadowMapTexture);
     if (FAILED(hr))
         return hr;
 
     D3D11_DEPTH_STENCIL_VIEW_DESC dsvd = CD3D11_DEPTH_STENCIL_VIEW_DESC(D3D11_DSV_DIMENSION_TEXTURE2D, DXGI_FORMAT_D32_FLOAT);
-    hr = device->CreateDepthStencilView(m_pDepthSimpleShadowMapTexture.Get(), &dsvd, &m_pSimpleShadowMapDepthStencilView);
+    hr = device->CreateDepthStencilView(m_pSimpleShadowMapTexture.Get(), &dsvd, &m_pSimpleShadowMapDepthStencilView);
     if (FAILED(hr))
         return hr;
 
-    D3D11_TEXTURE2D_DESC td = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32_TYPELESS, simpleShadowMapSize, simpleShadowMapSize, 6, 1, D3D11_BIND_SHADER_RESOURCE,
-        D3D11_USAGE_DEFAULT, 0, 1, 0, D3D11_RESOURCE_MISC_TEXTURECUBE);
-    hr = device->CreateTexture2D(&td, nullptr, &m_pResourceSimpleShadowMapTexture);
-    if (FAILED(hr))
-        return hr;
-
-    D3D11_SHADER_RESOURCE_VIEW_DESC srvd = CD3D11_SHADER_RESOURCE_VIEW_DESC(D3D11_SRV_DIMENSION_TEXTURECUBE, DXGI_FORMAT_R32_FLOAT);
-    hr = device->CreateShaderResourceView(m_pResourceSimpleShadowMapTexture.Get(), &srvd, &m_pSimpleShadowMapShaderResourceView);
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvd = CD3D11_SHADER_RESOURCE_VIEW_DESC(D3D11_SRV_DIMENSION_TEXTURE2D, DXGI_FORMAT_R32_FLOAT);
+    hr = device->CreateShaderResourceView(m_pSimpleShadowMapTexture.Get(), &srvd, &m_pSimpleShadowMapShaderResourceView);
     if (FAILED(hr))
         return hr;
 
@@ -828,7 +849,7 @@ HRESULT Renderer::Update()
         m_lightBufferData.LightAttenuation[i] = m_pSettings->GetLightAttenuation(i);
     }
 
-    m_lightBufferData.UseShadowPCF = m_pSettings->GetShadowPCFUsing();
+    m_shadowBufferData.UseShadowPCF = m_pSettings->GetShadowPCFUsing();
 
     m_materialBufferData.Albedo = m_pSettings->GetAlbedo();
     m_materialBufferData.Roughness = m_pSettings->GetRoughness();
@@ -891,12 +912,14 @@ void Renderer::RenderSphere(WorldViewProjectionConstantBuffer& transformationDat
         context->PSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
         context->PSSetConstantBuffers(1, 1, m_pLightBuffer.GetAddressOf());
         context->PSSetConstantBuffers(2, 1, m_pMaterialBuffer.GetAddressOf());
+        context->PSSetConstantBuffers(3, 1, m_pShadowBuffer.GetAddressOf());
         context->PSSetShaderResources(0, 1, m_pIrradianceShaderResourceView.GetAddressOf());
         context->PSSetShaderResources(1, 1, m_pPrefilteredColorShaderResourceView.GetAddressOf());
         context->PSSetShaderResources(2, 1, m_pPreintegratedBRDFShaderResourceView.GetAddressOf());
         context->PSSetSamplers(0, 1, m_pSamplerStates[0].GetAddressOf());
         context->PSSetSamplers(1, 1, m_pSamplerStates[1].GetAddressOf());
         context->PSSetSamplers(3, 1, m_pSamplerStates[2].GetAddressOf());
+        context->PSSetSamplers(4, 1, m_pSamplerStates[3].GetAddressOf());
 
         switch (m_pSettings->GetShaderMode())
         {
@@ -989,6 +1012,7 @@ void Renderer::RenderPlane()
     context->PSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
     context->PSSetConstantBuffers(1, 1, m_pLightBuffer.GetAddressOf());
     context->PSSetConstantBuffers(2, 1, m_pMaterialBuffer.GetAddressOf());
+    context->PSSetConstantBuffers(3, 1, m_pShadowBuffer.GetAddressOf());
     context->PSSetShaderResources(0, 1, m_pIrradianceShaderResourceView.GetAddressOf());
     context->PSSetShaderResources(1, 1, m_pPrefilteredColorShaderResourceView.GetAddressOf());
     context->PSSetShaderResources(2, 1, m_pPreintegratedBRDFShaderResourceView.GetAddressOf());
@@ -998,6 +1022,7 @@ void Renderer::RenderPlane()
     context->PSSetSamplers(1, 1, m_pSamplerStates[1].GetAddressOf());
     context->PSSetSamplers(2, 1, m_pSamplerStates[0].GetAddressOf());
     context->PSSetSamplers(3, 1, m_pSamplerStates[2].GetAddressOf());
+    context->PSSetSamplers(4, 1, m_pSamplerStates[3].GetAddressOf());
     context->PSSetShader(m_pPlanePixelShader.Get(), nullptr, 0);
     context->DrawIndexed(m_planeIndexCount, 0, 0);
 
@@ -1020,6 +1045,7 @@ void Renderer::RenderModels()
 
     context->UpdateSubresource(m_pLightBuffer.Get(), 0, nullptr, &m_lightBufferData, 0, 0);
     context->PSSetConstantBuffers(1, 1, m_pLightBuffer.GetAddressOf());
+    context->PSSetConstantBuffers(3, 1, m_pShadowBuffer.GetAddressOf());
     context->PSSetShaderResources(0, 1, m_pIrradianceShaderResourceView.GetAddressOf());
     context->PSSetShaderResources(1, 1, m_pPrefilteredColorShaderResourceView.GetAddressOf());
     context->PSSetShaderResources(2, 1, m_pPreintegratedBRDFShaderResourceView.GetAddressOf());
@@ -1027,6 +1053,7 @@ void Renderer::RenderModels()
     context->PSSetSamplers(0, 1, m_pSamplerStates[0].GetAddressOf());
     context->PSSetSamplers(1, 1, m_pSamplerStates[1].GetAddressOf());
     context->PSSetSamplers(3, 1, m_pSamplerStates[2].GetAddressOf());
+    context->PSSetSamplers(4, 1, m_pSamplerStates[3].GetAddressOf());
 
     Model::ShadersSlots slots = { 3, 4, 5, 2, 0, 2 };
     context->OMSetRenderTargets(1, &renderTarget, m_pDeviceResources->GetDepthStencil());
@@ -1106,34 +1133,64 @@ void Renderer::RenderSimpleShadow()
 
     Model::ShadersSlots slots = { 3, 4, 5, 2, 0, 2 };
 
-    WorldViewProjectionConstantBuffer cb;
-    cb.Projection = DirectX::XMMatrixTranspose(DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1, 0.1f, 10000.0f));
-
     DirectX::XMVECTOR lightPos = DirectX::XMLoadFloat4(&m_lightBufferData.LightPosition[0]);
 
-    D3D11_BOX box = CD3D11_BOX(0, 0, 0, simpleShadowMapSize, simpleShadowMapSize, 1);
     context->RSSetState(m_pSimpleShadowMapRasterizerState.Get());
-    for (UINT i = 0; i < 6; ++i)
+
+    DirectX::XMVECTOR x = DirectX::XMVectorSet(1, 0, 0, 0);
+    if (DirectX::XMVector3AngleBetweenVectors(lightPos, x).m128_f32[0] < 1e-7)
+        x = DirectX::XMVectorSet(0, 0, 1, 0);
+
+    DirectX::XMVECTOR y = DirectX::XMVector3Cross(lightPos, x);
+
+    DirectX::XMVECTOR center;
+    float radius;
+
+    if (m_pSettings->GetSceneMode() == Settings::SETTINGS_SCENE_MODE::MODEL)
     {
-        cb.World = DirectX::XMMatrixIdentity();
-        cb.View = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookToLH(lightPos, m_targers[i], m_ups[i]));
-
-        context->ClearDepthStencilView(m_pSimpleShadowMapDepthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-
-        if (m_pSettings->GetSceneMode() == Settings::SETTINGS_SCENE_MODE::MODEL)
-        {
-
-            for (size_t i = 0; i < m_pModels.size(); ++i)
-                m_pModels[i]->Render(context, cb, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots, false, false);
-
-            for (size_t i = 0; i < m_pModels.size(); ++i)
-                m_pModels[i]->RenderTransparent(context, cb, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots, m_pCamera->GetDirection(), false, false);
-        }
-        else
-            RenderSphere(cb, false);
-
-        context->CopySubresourceRegion(m_pResourceSimpleShadowMapTexture.Get(), D3D11CalcSubresource(0, i, 1), 0, 0, 0, m_pDepthSimpleShadowMapTexture.Get(), 0, nullptr);
+        center = m_sceneCenter;
+        radius = m_sceneRadius;
     }
+    else
+    {
+        center = DirectX::XMVectorSet(0, 0, 0, 0);
+        radius = 100;
+    }
+
+    WorldViewProjectionConstantBuffer cb;
+    cb.World = DirectX::XMMatrixIdentity();
+    DirectX::XMMATRIX view = DirectX::XMMatrixLookAtLH(DirectX::XMVectorAdd(center, DirectX::XMVectorScale(DirectX::XMVector3Normalize(lightPos), radius * 2)),
+        center, DirectX::XMVector3Normalize(y));
+    cb.View = DirectX::XMMatrixTranspose(view);
+
+    DirectX::XMVECTOR centerLightSpace = DirectX::XMVector3Transform(center, view);
+    float left = centerLightSpace.m128_f32[0] - radius;
+    float bottom = centerLightSpace.m128_f32[1] - radius;
+    float nearZ = centerLightSpace.m128_f32[2] - radius;
+    float right = centerLightSpace.m128_f32[0] + radius;
+    float top = centerLightSpace.m128_f32[1] + radius;
+    float farZ = centerLightSpace.m128_f32[2] + radius;
+
+    DirectX::XMMATRIX projection = DirectX::XMMatrixOrthographicOffCenterLH(left, right, bottom, top, nearZ, farZ);
+    cb.Projection = DirectX::XMMatrixTranspose(projection);
+
+    context->ClearDepthStencilView(m_pSimpleShadowMapDepthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+    if (m_pSettings->GetSceneMode() == Settings::SETTINGS_SCENE_MODE::MODEL)
+    {
+        for (size_t i = 0; i < m_pModels.size(); ++i)
+            m_pModels[i]->Render(context, cb, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots, false, false);
+
+        for (size_t i = 0; i < m_pModels.size(); ++i)
+            m_pModels[i]->RenderTransparent(context, cb, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots, m_pCamera->GetDirection(), false, false);
+    }
+    else
+        RenderSphere(cb, false);
+
+    DirectX::XMMATRIX uv = DirectX::XMMatrixSet(0.5f, 0, 0, 0, 0, -0.5f, 0, 0, 0, 0, 1, 0, 0.5f, 0.5f, 0, 1);
+    m_shadowBufferData.SimpleShadowTransform = DirectX::XMMatrixMultiplyTranspose(DirectX::XMMatrixMultiply(view, projection), uv);
+    context->UpdateSubresource(m_pShadowBuffer.Get(), 0, nullptr, &m_shadowBufferData, 0, 0);
+
     context->RSSetState(nullptr);
 }
 

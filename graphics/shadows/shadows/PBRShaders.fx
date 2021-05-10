@@ -8,12 +8,13 @@ Texture2D<float4> diffuseTexture : register(t3);
 Texture2D<float4> metallicRoughnessTexture : register(t4);
 Texture2D<float4> normalTexture : register(t5);
 
-TextureCube simpleShadowMapTexture : register(t6);
+Texture2D simpleShadowMapTexture : register(t6);
 
 SamplerState MinMagMipLinear : register(s0);
 SamplerState MinMagLinearMipPointClamp : register(s1);
 SamplerState ModelSampler : register(s2);
-SamplerComparisonState MinMagMipLinearLess : register(s3);
+SamplerState MinMagMipLinearClamp : register(s3);
+SamplerComparisonState MinMagMipLinearClampLess : register(s4);
 
 static const float PI = 3.14159265358979323846f;
 static const float MAX_REFLECTION_LOD = 4.0f;
@@ -33,7 +34,6 @@ cbuffer Lights : register(b1)
     float4 LightPositions[NUM_LIGHTS];
     float4 LightColors[NUM_LIGHTS];
     float4 LightAttenuations[NUM_LIGHTS];
-    bool UseShadowPCF;
 }
 
 cbuffer Material : register(b2)
@@ -41,6 +41,12 @@ cbuffer Material : register(b2)
     float4 Albedo;
 	float Roughness;
 	float Metalness;
+}
+
+cbuffer Shadows : register(b3)
+{
+    matrix SimpleShadowTransform;
+    bool UseShadowPCF;
 }
 
 struct VS_INPUT
@@ -94,7 +100,7 @@ float normalDistribution(float3 n, float3 v, float3 l, float roughness)
 
 float4 ndps_main(PS_INPUT input) : SV_TARGET
 {
-    return normalDistribution(normalize(input.Normal), normalize(CameraPos.xyz - input.WorldPos.xyz), normalize(LightPositions[0].xyz - input.WorldPos.xyz), Roughness);
+    return normalDistribution(normalize(input.Normal), normalize(CameraPos.xyz - input.WorldPos.xyz), normalize(LightPositions[0].xyz), Roughness);
 }
 
 float SchlickGGX(float3 n, float3 v, float k)
@@ -111,7 +117,7 @@ float geometry(float3 n, float3 v, float3 l, float roughness)
 
 float4 gps_main(PS_INPUT input) : SV_TARGET
 {
-    return geometry(normalize(input.Normal), normalize(CameraPos.xyz - input.WorldPos.xyz), normalize(LightPositions[0].xyz - input.WorldPos.xyz), Roughness);
+    return geometry(normalize(input.Normal), normalize(CameraPos.xyz - input.WorldPos.xyz), normalize(LightPositions[0].xyz), Roughness);
 }
 
 float3 fresnel(float3 n, float3 v, float3 l, float3 albedo, float metalness)
@@ -122,7 +128,7 @@ float3 fresnel(float3 n, float3 v, float3 l, float3 albedo, float metalness)
 
 float4 fps_main(PS_INPUT input) : SV_TARGET
 {
-    return float4(fresnel(normalize(input.Normal), normalize(CameraPos.xyz - input.WorldPos.xyz), normalize(LightPositions[0].xyz - input.WorldPos.xyz), Albedo.xyz, Metalness), 1.0f);
+    return float4(fresnel(normalize(input.Normal), normalize(CameraPos.xyz - input.WorldPos.xyz), normalize(LightPositions[0].xyz), Albedo.xyz, Metalness), 1.0f);
 }
 
 float3 BRDF(float3 p, float3 n, float3 v, float3 l, float3 albedo, float metalness, float roughness)
@@ -152,15 +158,16 @@ float VectorToDepth(float3 vec)
 
 float3 LO_i(float3 p, float3 n, float3 v, uint lightIndex, float3 pos, float3 albedo, float metalness, float roughness)
 {
-    float3 lightDir = LightPositions[lightIndex].xyz - pos;
+    float3 lightDir = LightPositions[lightIndex].xyz;
     float4 lightColor = LightColors[lightIndex];
     float atten = Attenuation(lightDir, LightAttenuations[lightIndex].xyz);
 	float3 l = normalize(lightDir);
     float shadowFactor = 1;
+    float4 proj = mul(float4(pos, 1.0f), SimpleShadowTransform);
     if (UseShadowPCF)
-        shadowFactor = simpleShadowMapTexture.SampleCmpLevelZero(MinMagMipLinearLess, -l, VectorToDepth(-lightDir)).r;
+        shadowFactor = simpleShadowMapTexture.SampleCmpLevelZero(MinMagMipLinearClampLess, proj.xy, proj.z).r;
     else
-        shadowFactor = (simpleShadowMapTexture.Sample(MinMagMipLinear, -l).r > VectorToDepth(-lightDir)) ? 1 : 0;
+        shadowFactor = (simpleShadowMapTexture.Sample(MinMagMipLinearClamp, proj.xy).r > proj.z) ? 1 : 0;
     return BRDF(p, n, v, l, albedo, metalness, roughness) * lightColor.rgb * atten * max(dot(l, n), 0) * lightColor.a * shadowFactor;
 }
 
@@ -229,6 +236,7 @@ float4 ps_main(PS_INPUT input) : SV_TARGET
     float4 albedo = GetAlbedo(input.Tex);
 
     float3 color = 0.0f;
+    [unroll]
     for (uint i = 0; i < NUM_LIGHTS; ++i)
         color += LO_i(input.WorldPos.xyz, n, v, i, input.WorldPos.xyz, albedo.rgb, metalness, roughness);
 

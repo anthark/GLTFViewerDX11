@@ -74,9 +74,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pPreintegratedBRDFTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pPreintegratedBRDFShaderResourceView;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pPlaneShaderResourceView;
-    Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pDepthSimpleShadowMapTexture;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pSimpleShadowMapTexture;
     Microsoft::WRL::ComPtr<ID3D11DepthStencilView>   m_pSimpleShadowMapDepthStencilView;
-    Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pResourceSimpleShadowMapTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pSimpleShadowMapShaderResourceView;
     Microsoft::WRL::ComPtr<ID3D11RasterizerState>    m_pSimpleShadowMapRasterizerState;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pPBRVertexShader;
@@ -96,6 +95,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pConstantBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pLightBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pMaterialBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pShadowBuffer;
 
     std::vector<Microsoft::WRL::ComPtr<ID3D11SamplerState>> m_pSamplerStates;
 
@@ -104,10 +104,14 @@ private:
     WorldViewProjectionConstantBuffer m_constantBufferData;
     LightConstantBuffer               m_lightBufferData;
     MaterialConstantBuffer            m_materialBufferData;
+    ShadowConstantBuffer              m_shadowBufferData;
     
     UINT32 m_indexCount;
     UINT32 m_planeIndexCount;
     UINT32 m_frameCount;
+
+    DirectX::XMVECTOR m_sceneCenter;
+    FLOAT m_sceneRadius;
 
     DirectX::XMVECTOR m_targers[6] = {
         DirectX::XMVectorSet(1, 0, 0, 0),

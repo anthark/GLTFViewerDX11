@@ -40,6 +40,9 @@ HRESULT Model::CreateDeviceDependentResources(ID3D11Device* device)
     if (FAILED(hr))
         return hr;
 
+    m_max = DirectX::XMVectorSet(-INFINITY, -INFINITY, -INFINITY, 0);
+    m_min = DirectX::XMVectorSet(INFINITY, INFINITY, INFINITY, 0);
+
     hr = CreatePrimitives(device, model);
 
     return hr;
@@ -341,6 +344,12 @@ HRESULT Model::CreatePrimitive(ID3D11Device* device, tinygltf::Model& model, tin
             DirectX::XMMATRIX world = DirectX::XMMatrixMultiply(m_worldMatricies[primitive.matrix], m_globalWorldMatrix);
             primitive.max = DirectX::XMVector3Transform(DirectX::XMLoadFloat3(&maxPosition), world);
             primitive.min = DirectX::XMVector3Transform(DirectX::XMLoadFloat3(&minPosition), world);
+
+            for (size_t i = 0; i < 3; ++i)
+            {
+                m_max.m128_f32[i] = max(m_max.m128_f32[i], max(primitive.max.m128_f32[i], primitive.min.m128_f32[i]));
+                m_min.m128_f32[i] = min(m_min.m128_f32[i], min(primitive.max.m128_f32[i], primitive.min.m128_f32[i]));
+            }
         }
     }
 
