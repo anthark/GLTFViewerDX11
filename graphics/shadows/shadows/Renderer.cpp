@@ -1296,9 +1296,9 @@ void Renderer::RenderPSSM()
         dirNear = DirectX::XMVectorScale(cameraDir, nearBorder);
         dirFar = DirectX::XMVectorScale(cameraDir, farBorder);
         rightNear = DirectX::XMVectorScale(cameraRight, nearBorder);
-        rightFar = DirectX::XMVectorScale(cameraRight, nearBorder);
+        rightFar = DirectX::XMVectorScale(cameraRight, farBorder);
         upNear = DirectX::XMVectorScale(cameraUp, nearBorder * aspectRatio);
-        upFar = DirectX::XMVectorScale(cameraUp, nearBorder * aspectRatio);
+        upFar = DirectX::XMVectorScale(cameraUp, farBorder * aspectRatio);
         
         points[0] = DirectX::XMVectorAdd(cameraPos, DirectX::XMVectorAdd(dirNear, DirectX::XMVectorAdd(rightNear, upNear)));
         points[1] = DirectX::XMVectorAdd(cameraPos, DirectX::XMVectorAdd(dirNear, DirectX::XMVectorSubtract(rightNear, upNear)));
