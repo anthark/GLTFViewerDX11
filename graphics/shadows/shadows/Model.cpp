@@ -15,7 +15,9 @@
 Model::Model(const char* modelPath, const std::shared_ptr<ModelShaders>& modelShaders, DirectX::XMMATRIX globalWorldMatrix) :
     m_modelPath(modelsPath + modelPath),
     m_globalWorldMatrix(globalWorldMatrix),
-    m_pModelShaders(modelShaders)
+    m_pModelShaders(modelShaders),
+    m_max(),
+    m_min()
 {};
 
 HRESULT Model::CreateDeviceDependentResources(ID3D11Device* device)

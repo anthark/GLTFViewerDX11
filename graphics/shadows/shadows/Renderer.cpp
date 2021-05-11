@@ -1207,7 +1207,7 @@ void Renderer::RenderSimpleShadow()
     float nearZ = centerLightSpace.m128_f32[2] - radius;
     float right = centerLightSpace.m128_f32[0] + radius;
     float top = centerLightSpace.m128_f32[1] + radius;
-    float farZ = centerLightSpace.m128_f32[2] + radius;
+    float farZ = centerLightSpace.m128_f32[2] + 750 * sqrt(2.0f);
 
     DirectX::XMMATRIX projection = DirectX::XMMatrixOrthographicOffCenterLH(left, right, bottom, top, nearZ, farZ);
     cb.Projection = DirectX::XMMatrixTranspose(projection);
