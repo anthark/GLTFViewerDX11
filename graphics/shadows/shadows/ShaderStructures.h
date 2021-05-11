@@ -8,6 +8,7 @@ struct WorldViewProjectionConstantBuffer
 	DirectX::XMMATRIX View;
 	DirectX::XMMATRIX Projection;
 	DirectX::XMFLOAT4 CameraPos;
+	DirectX::XMFLOAT4 CameraDir;
 };
 
 struct VertexData
@@ -53,5 +54,8 @@ __declspec(align(16))
 struct ShadowConstantBuffer
 {
 	DirectX::XMMATRIX SimpleShadowTransform;
-	bool UseShadowPCF;
+	DirectX::XMMATRIX PSSMTransform[4];
+	DirectX::XMFLOAT4 PSSMBorders;
+	BOOL UseShadowPCF;
+	BOOL UseShadowPSSM;
 };

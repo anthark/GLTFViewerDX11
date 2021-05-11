@@ -40,6 +40,7 @@ public:
     INT GetDepthBias() const { return m_depthBias; };
     FLOAT GetSlopeScaledDepthBias() const { return m_slopeScaledDepthBias; };
     bool GetShadowPCFUsing() const { return m_useShadowPCF; };
+    bool GetShadowPSSMUsing() const { return m_useShadowPSSM; };
 
     void Render();
 
@@ -62,4 +63,5 @@ private:
     int   m_depthBias;
     float m_slopeScaledDepthBias;
     bool  m_useShadowPCF;
+    bool  m_useShadowPSSM;
 };

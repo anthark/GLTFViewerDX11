@@ -4,8 +4,8 @@
 
 Camera::Camera() :
     m_eye(DirectX::XMVectorSet(-200.0f, 150.0f, 100.0f, 0.0f)),
-    m_viewDir(DirectX::XMVector4Normalize(DirectX::XMVectorSet(1.0f, 0.0f, -1.0f, 0.0f))),
-    m_up(DirectX::XMVector4Normalize(DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)))
+    m_viewDir(DirectX::XMVector3Normalize(DirectX::XMVectorSet(1.0f, 0.0f, -1.0f, 0.0f))),
+    m_up(DirectX::XMVector3Normalize(DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)))
 {};
 
 void Camera::MoveDirection(float delta)
@@ -28,7 +28,7 @@ void Camera::Rotate(float horisontalAngle, float verticalAngle)
 
 DirectX::XMVECTOR Camera::GetPerpendicular() const
 {
-    return DirectX::XMVector4Normalize(DirectX::XMVector3Cross(m_viewDir, m_up));
+    return DirectX::XMVector3Normalize(DirectX::XMVector3Cross(m_viewDir, m_up));
 }
 
 DirectX::XMMATRIX Camera::GetViewMatrix() const

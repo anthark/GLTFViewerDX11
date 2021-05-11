@@ -17,6 +17,10 @@ const UINT irradianceSize = 32;
 const UINT prefilteredColorSize = 128;
 const UINT preintegratedBRDFSize = 128;
 const UINT simpleShadowMapSize = 1024;
+const UINT PSSMSize = 1024;
+const float PSSMSplit = 2500.0f;
+const float projectionNear = 0.1f;
+const float projectionFar = 10000.0f;
 
 Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources, const std::shared_ptr<Camera>& camera, const std::shared_ptr<Settings>& settings) :
     m_pDeviceResources(deviceResources),
@@ -27,7 +31,10 @@ Renderer::Renderer(const std::shared_ptr<DeviceResources>& deviceResources, cons
     m_planeIndexCount(0),
     m_constantBufferData(),
     m_lightBufferData(),
-    m_materialBufferData()
+    m_materialBufferData(),
+    m_shadowBufferData(),
+    m_sceneCenter(),
+    m_sceneRadius(0)
 {};
 
 HRESULT Renderer::CreateShaders()
@@ -322,6 +329,9 @@ HRESULT Renderer::CreateTexture()
         return hr;
 
     sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    sd.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+    sd.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+    sd.BorderColor[0] = 1.0f;
     hr = device->CreateSamplerState(&sd, &m_pSamplerStates[2]);
     if (FAILED(hr))
         return hr;
@@ -617,7 +627,7 @@ HRESULT Renderer::CreatePreintegratedBRDFTexture()
 void Renderer::UpdatePerspective()
 {
     m_constantBufferData.Projection = DirectX::XMMatrixTranspose(
-        DirectX::XMMatrixPerspectiveFovRH(DirectX::XM_PIDIV2, m_pDeviceResources->GetAspectRatio(), 0.1f, 10000.0f)
+        DirectX::XMMatrixPerspectiveFovRH(DirectX::XM_PIDIV2, m_pDeviceResources->GetAspectRatio(), projectionNear, projectionFar)
     );
 }
 
@@ -716,6 +726,25 @@ HRESULT Renderer::CreateShadows()
     rd.SlopeScaledDepthBias = 0;
     rd.DepthClipEnable = true;
     hr = device->CreateRasterizerState(&rd, &m_pSimpleShadowMapRasterizerState);
+    if (FAILED(hr))
+        return hr;
+
+    dd = CD3D11_TEXTURE2D_DESC(DXGI_FORMAT_R32_TYPELESS, PSSMSize, PSSMSize, 4, 1, D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE);
+    hr = device->CreateTexture2D(&dd, nullptr, &m_pPSSMTexture);
+    if (FAILED(hr))
+        return hr;
+
+    m_pPSSMDepthStencilViews.resize(4);
+    for (UINT i = 0; i < 4; ++i)
+    {
+        dsvd = CD3D11_DEPTH_STENCIL_VIEW_DESC(D3D11_DSV_DIMENSION_TEXTURE2DARRAY, DXGI_FORMAT_D32_FLOAT, 0, i, 1);
+        hr = device->CreateDepthStencilView(m_pPSSMTexture.Get(), &dsvd, &m_pPSSMDepthStencilViews[i]);
+        if (FAILED(hr))
+            return hr;
+    }
+
+    srvd = CD3D11_SHADER_RESOURCE_VIEW_DESC(D3D11_SRV_DIMENSION_TEXTURE2DARRAY, DXGI_FORMAT_R32_FLOAT);
+    hr = device->CreateShaderResourceView(m_pPSSMTexture.Get(), &srvd, &m_pPSSMShaderResourceView);
 
     return hr;
 }
@@ -841,6 +870,7 @@ HRESULT Renderer::Update()
     
     m_constantBufferData.View = DirectX::XMMatrixTranspose(m_pCamera->GetViewMatrix());
     DirectX::XMStoreFloat4(&m_constantBufferData.CameraPos, m_pCamera->GetPosition());
+    DirectX::XMStoreFloat4(&m_constantBufferData.CameraDir, m_pCamera->GetDirection());
 
     for (UINT i = 0; i < NUM_LIGHTS; ++i)
     {
@@ -850,6 +880,7 @@ HRESULT Renderer::Update()
     }
 
     m_shadowBufferData.UseShadowPCF = m_pSettings->GetShadowPCFUsing();
+    m_shadowBufferData.UseShadowPSSM = m_pSettings->GetShadowPSSMUsing();
 
     m_materialBufferData.Albedo = m_pSettings->GetAlbedo();
     m_materialBufferData.Roughness = m_pSettings->GetRoughness();
@@ -916,6 +947,8 @@ void Renderer::RenderSphere(WorldViewProjectionConstantBuffer& transformationDat
         context->PSSetShaderResources(0, 1, m_pIrradianceShaderResourceView.GetAddressOf());
         context->PSSetShaderResources(1, 1, m_pPrefilteredColorShaderResourceView.GetAddressOf());
         context->PSSetShaderResources(2, 1, m_pPreintegratedBRDFShaderResourceView.GetAddressOf());
+        context->PSSetShaderResources(6, 1, m_pSimpleShadowMapShaderResourceView.GetAddressOf());
+        context->PSSetShaderResources(7, 1, m_pPSSMShaderResourceView.GetAddressOf());
         context->PSSetSamplers(0, 1, m_pSamplerStates[0].GetAddressOf());
         context->PSSetSamplers(1, 1, m_pSamplerStates[1].GetAddressOf());
         context->PSSetSamplers(3, 1, m_pSamplerStates[2].GetAddressOf());
@@ -965,7 +998,7 @@ void Renderer::RenderEnvironment()
     context->IASetInputLayout(m_pInputLayout.Get());
 
     m_constantBufferData.World = DirectX::XMMatrixMultiplyTranspose(
-        DirectX::XMMatrixScaling(10000, 10000, 10000),
+        DirectX::XMMatrixScaling(projectionFar, projectionFar, projectionFar),
         DirectX::XMMatrixTranslationFromVector(m_pCamera->GetPosition())
     );
     context->UpdateSubresource(m_pConstantBuffer.Get(), 0, NULL, &m_constantBufferData, 0, 0);
@@ -1018,6 +1051,7 @@ void Renderer::RenderPlane()
     context->PSSetShaderResources(2, 1, m_pPreintegratedBRDFShaderResourceView.GetAddressOf());
     context->PSSetShaderResources(3, 1, m_pPlaneShaderResourceView.GetAddressOf());
     context->PSSetShaderResources(6, 1, m_pSimpleShadowMapShaderResourceView.GetAddressOf());
+    context->PSSetShaderResources(7, 1, m_pPSSMShaderResourceView.GetAddressOf());
     context->PSSetSamplers(0, 1, m_pSamplerStates[0].GetAddressOf());
     context->PSSetSamplers(1, 1, m_pSamplerStates[1].GetAddressOf());
     context->PSSetSamplers(2, 1, m_pSamplerStates[0].GetAddressOf());
@@ -1050,6 +1084,7 @@ void Renderer::RenderModels()
     context->PSSetShaderResources(1, 1, m_pPrefilteredColorShaderResourceView.GetAddressOf());
     context->PSSetShaderResources(2, 1, m_pPreintegratedBRDFShaderResourceView.GetAddressOf());
     context->PSSetShaderResources(6, 1, m_pSimpleShadowMapShaderResourceView.GetAddressOf());
+    context->PSSetShaderResources(7, 1, m_pPSSMShaderResourceView.GetAddressOf());
     context->PSSetSamplers(0, 1, m_pSamplerStates[0].GetAddressOf());
     context->PSSetSamplers(1, 1, m_pSamplerStates[1].GetAddressOf());
     context->PSSetSamplers(3, 1, m_pSamplerStates[2].GetAddressOf());
@@ -1089,7 +1124,10 @@ void Renderer::Render()
 
     if (m_pSettings->GetShaderMode() == Settings::SETTINGS_PBR_SHADER_MODE::REGULAR)
     {
-        RenderSimpleShadow();
+        if (m_pSettings->GetShadowPSSMUsing())
+            RenderPSSM();
+        else
+            RenderSimpleShadow();
 
         context->RSSetViewports(1, &viewport);
 
@@ -1189,6 +1227,126 @@ void Renderer::RenderSimpleShadow()
 
     DirectX::XMMATRIX uv = DirectX::XMMatrixSet(0.5f, 0, 0, 0, 0, -0.5f, 0, 0, 0, 0, 1, 0, 0.5f, 0.5f, 0, 1);
     m_shadowBufferData.SimpleShadowTransform = DirectX::XMMatrixMultiplyTranspose(DirectX::XMMatrixMultiply(view, projection), uv);
+    context->UpdateSubresource(m_pShadowBuffer.Get(), 0, nullptr, &m_shadowBufferData, 0, 0);
+
+    context->RSSetState(nullptr);
+}
+
+void GetMaximumMinimum(std::vector<DirectX::XMVECTOR>& points, DirectX::XMVECTOR& maxPoint, DirectX::XMVECTOR& minPoint)
+{
+    maxPoint = DirectX::XMVectorSet(-INFINITY, -INFINITY, -INFINITY, 0);
+    minPoint = DirectX::XMVectorSet(INFINITY, INFINITY, INFINITY, 0);
+    for (DirectX::XMVECTOR& point : points)
+    {
+        for (size_t i = 0; i < 3; ++i)
+        {
+            maxPoint.m128_f32[i] = max(maxPoint.m128_f32[i], point.m128_f32[i]);
+            minPoint.m128_f32[i] = min(minPoint.m128_f32[i], point.m128_f32[i]);
+        }
+    }
+}
+
+void Renderer::RenderPSSM()
+{
+    ID3D11DeviceContext* context = m_pDeviceResources->GetDeviceContext();
+
+    D3D11_VIEWPORT viewport = CD3D11_VIEWPORT(0.0f, 0.0f, static_cast<FLOAT>(PSSMSize), static_cast<FLOAT>(PSSMSize));
+
+    context->RSSetViewports(1, &viewport);
+
+    Model::ShadersSlots slots = { 3, 4, 5, 2, 0, 2 };
+
+    DirectX::XMVECTOR lightPos = DirectX::XMLoadFloat4(&m_lightBufferData.LightPosition[0]);
+    DirectX::XMVECTOR lightDir = DirectX::XMVector3Normalize(lightPos);
+
+    context->RSSetState(m_pSimpleShadowMapRasterizerState.Get());
+
+    DirectX::XMVECTOR x = DirectX::XMVectorSet(1, 0, 0, 0);
+    if (DirectX::XMVector3AngleBetweenVectors(lightPos, x).m128_f32[0] < 1e-7)
+        x = DirectX::XMVectorSet(0, 0, 1, 0);
+
+    DirectX::XMVECTOR y = DirectX::XMVector3Normalize(DirectX::XMVector3Cross(lightPos, x));
+
+    DirectX::XMVECTOR center;
+    float radius;
+
+    WorldViewProjectionConstantBuffer cb;
+    cb.World = DirectX::XMMatrixIdentity();
+
+    DirectX::XMMATRIX view, projection;
+    float nearBorder = projectionNear;
+    float farBorder = nearBorder + PSSMSplit;
+    float borders[4];
+
+    DirectX::XMVECTOR cameraPos = m_pCamera->GetPosition();
+    DirectX::XMVECTOR cameraDir = m_pCamera->GetDirection();
+    DirectX::XMVECTOR cameraUp = m_pCamera->GetUp();
+    DirectX::XMVECTOR cameraRight = m_pCamera->GetPerpendicular();
+
+    DirectX::XMVECTOR dirNear, dirFar, rightNear, rightFar, upNear, upFar;
+
+    DirectX::XMVECTOR maxPoint, minPoint;
+
+    std::vector<DirectX::XMVECTOR> points(8);
+    float aspectRatio = m_pDeviceResources->GetAspectRatio();
+
+    for (UINT split = 0; split < 4; ++split)
+    {
+        dirNear = DirectX::XMVectorScale(cameraDir, nearBorder);
+        dirFar = DirectX::XMVectorScale(cameraDir, farBorder);
+        rightNear = DirectX::XMVectorScale(cameraRight, nearBorder);
+        rightFar = DirectX::XMVectorScale(cameraRight, nearBorder);
+        upNear = DirectX::XMVectorScale(cameraUp, nearBorder * aspectRatio);
+        upFar = DirectX::XMVectorScale(cameraUp, nearBorder * aspectRatio);
+        
+        points[0] = DirectX::XMVectorAdd(cameraPos, DirectX::XMVectorAdd(dirNear, DirectX::XMVectorAdd(rightNear, upNear)));
+        points[1] = DirectX::XMVectorAdd(cameraPos, DirectX::XMVectorAdd(dirNear, DirectX::XMVectorSubtract(rightNear, upNear)));
+        points[2] = DirectX::XMVectorAdd(cameraPos, DirectX::XMVectorSubtract(dirNear, DirectX::XMVectorSubtract(rightNear, upNear)));
+        points[3] = DirectX::XMVectorAdd(cameraPos, DirectX::XMVectorSubtract(dirNear, DirectX::XMVectorAdd(rightNear, upNear)));
+
+        points[4] = DirectX::XMVectorAdd(cameraPos, DirectX::XMVectorAdd(dirFar, DirectX::XMVectorAdd(rightFar, upFar)));
+        points[5] = DirectX::XMVectorAdd(cameraPos, DirectX::XMVectorAdd(dirFar, DirectX::XMVectorSubtract(rightFar, upFar)));
+        points[6] = DirectX::XMVectorAdd(cameraPos, DirectX::XMVectorSubtract(dirFar, DirectX::XMVectorSubtract(rightFar, upFar)));
+        points[7] = DirectX::XMVectorAdd(cameraPos, DirectX::XMVectorSubtract(dirFar, DirectX::XMVectorAdd(rightFar, upFar)));
+
+        GetMaximumMinimum(points, maxPoint, minPoint);
+
+        center = DirectX::XMVectorDivide(DirectX::XMVectorAdd(maxPoint, minPoint), DirectX::XMVectorReplicate(2));
+        radius = DirectX::XMVector3Length(DirectX::XMVectorDivide(DirectX::XMVectorSubtract(maxPoint, minPoint), DirectX::XMVectorReplicate(2))).m128_f32[0];
+
+        view = DirectX::XMMatrixLookAtLH(DirectX::XMVectorAdd(center, DirectX::XMVectorScale(lightDir, radius * 2)), center, y);
+        cb.View = DirectX::XMMatrixTranspose(view);
+
+        for (size_t i = 0; i < 8; ++i)
+            points[i] = DirectX::XMVector3Transform(points[i], view);
+        GetMaximumMinimum(points, maxPoint, minPoint);
+
+        projection = DirectX::XMMatrixOrthographicOffCenterLH(minPoint.m128_f32[0], maxPoint.m128_f32[0], minPoint.m128_f32[1], maxPoint.m128_f32[1], minPoint.m128_f32[2], maxPoint.m128_f32[2]);
+        cb.Projection = DirectX::XMMatrixTranspose(projection);
+
+        context->ClearDepthStencilView(m_pPSSMDepthStencilViews[split].Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+        context->OMSetRenderTargets(0, nullptr, m_pPSSMDepthStencilViews[split].Get());
+
+        if (m_pSettings->GetSceneMode() == Settings::SETTINGS_SCENE_MODE::MODEL)
+        {
+            for (size_t i = 0; i < m_pModels.size(); ++i)
+                m_pModels[i]->Render(context, cb, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots, false, false);
+
+            for (size_t i = 0; i < m_pModels.size(); ++i)
+                m_pModels[i]->RenderTransparent(context, cb, m_pConstantBuffer.Get(), m_pMaterialBuffer.Get(), slots, m_pCamera->GetDirection(), false, false);
+        }
+        else
+            RenderSphere(cb, false);
+
+        DirectX::XMMATRIX uv = DirectX::XMMatrixSet(0.5f, 0, 0, 0, 0, -0.5f, 0, 0, 0, 0, 1, 0, 0.5f, 0.5f, 0, 1);
+        m_shadowBufferData.PSSMTransform[split] = DirectX::XMMatrixMultiplyTranspose(DirectX::XMMatrixMultiply(view, projection), uv);
+
+        borders[split] = farBorder;
+        
+        nearBorder = farBorder;
+        farBorder += PSSMSplit;
+    }
+    m_shadowBufferData.PSSMBorders = DirectX::XMFLOAT4(borders);
     context->UpdateSubresource(m_pShadowBuffer.Get(), 0, nullptr, &m_shadowBufferData, 0, 0);
 
     context->RSSetState(nullptr);

@@ -46,6 +46,7 @@ private:
     void RenderEnvironment();
     void RenderPlane();
     void RenderSimpleShadow();
+    void RenderPSSM();
     void PostProcessTexture();
 
     std::unique_ptr<RenderTexture>      m_pRenderTexture;
@@ -77,6 +78,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pSimpleShadowMapTexture;
     Microsoft::WRL::ComPtr<ID3D11DepthStencilView>   m_pSimpleShadowMapDepthStencilView;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pSimpleShadowMapShaderResourceView;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pPSSMTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pPSSMShaderResourceView;
     Microsoft::WRL::ComPtr<ID3D11RasterizerState>    m_pSimpleShadowMapRasterizerState;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pPBRVertexShader;
     Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pEnvironmentVertexShader;
@@ -97,7 +100,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pMaterialBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pShadowBuffer;
 
-    std::vector<Microsoft::WRL::ComPtr<ID3D11SamplerState>> m_pSamplerStates;
+    std::vector<Microsoft::WRL::ComPtr<ID3D11SamplerState>>       m_pSamplerStates;
+    std::vector<Microsoft::WRL::ComPtr<ID3D11DepthStencilView>>   m_pPSSMDepthStencilViews;
 
     std::vector<std::unique_ptr<Model>> m_pModels;
 

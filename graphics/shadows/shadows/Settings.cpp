@@ -20,7 +20,8 @@ Settings::Settings(const std::shared_ptr<DeviceResources>& deviceResources) :
     m_metalRough(),
     m_depthBias(10),
     m_slopeScaledDepthBias(2 * static_cast<float>(sqrt(2))),
-    m_useShadowPCF(true)
+    m_useShadowPCF(true),
+    m_useShadowPSSM(false)
 {
     for (UINT i = 0; i < NUM_LIGHTS; ++i)
     {
@@ -89,7 +90,7 @@ void Settings::Render()
     }
 
     ImGui::SetNextWindowPos(ImVec2(0, 90 + 175 * NUM_LIGHTS), ImGuiCond_Once);
-    ImGui::SetNextWindowSize(ImVec2(410, 100), ImGuiCond_Once);
+    ImGui::SetNextWindowSize(ImVec2(410, 150), ImGuiCond_Once);
 
     ImGui::Begin("Shadows");
 
@@ -99,11 +100,13 @@ void Settings::Render()
 
     ImGui::Checkbox("Use PCF", &m_useShadowPCF);
 
+    ImGui::Checkbox("Use PSSM", &m_useShadowPSSM);
+
     ImGui::End();
 
     if (m_sceneMode == SETTINGS_SCENE_MODE::SPHERE)
     {
-        ImGui::SetNextWindowPos(ImVec2(0, 190 + 175 * NUM_LIGHTS), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(0, 240 + 175 * NUM_LIGHTS), ImGuiCond_Once);
         ImGui::SetNextWindowSize(ImVec2(410, 100), ImGuiCond_Once);
 
         ImGui::Begin("Material");

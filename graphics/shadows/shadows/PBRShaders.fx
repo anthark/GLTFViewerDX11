@@ -9,17 +9,16 @@ Texture2D<float4> metallicRoughnessTexture : register(t4);
 Texture2D<float4> normalTexture : register(t5);
 
 Texture2D simpleShadowMapTexture : register(t6);
+Texture2DArray PSSMTexture : register(t7);
 
 SamplerState MinMagMipLinear : register(s0);
 SamplerState MinMagLinearMipPointClamp : register(s1);
 SamplerState ModelSampler : register(s2);
-SamplerState MinMagMipLinearClamp : register(s3);
-SamplerComparisonState MinMagMipLinearClampLess : register(s4);
+SamplerState MinMagMipLinearBorder : register(s3);
+SamplerComparisonState MinMagMipLinearBorderLess : register(s4);
 
 static const float PI = 3.14159265358979323846f;
 static const float MAX_REFLECTION_LOD = 4.0f;
-static const float LIGHT_NEAR = 0.1f;
-static const float LIGHT_FAR = 10000.0f;
 
 cbuffer Transformation: register(b0)
 {
@@ -27,6 +26,7 @@ cbuffer Transformation: register(b0)
     matrix View;
     matrix Projection;
 	float4 CameraPos;
+    float4 CameraDir;
 }
 
 cbuffer Lights : register(b1)
@@ -46,7 +46,10 @@ cbuffer Material : register(b2)
 cbuffer Shadows : register(b3)
 {
     matrix SimpleShadowTransform;
+    matrix PSSMTransform[4];
+    float4 PSSMBorders;
     bool UseShadowPCF;
+    bool UseShadowPSSM;
 }
 
 struct VS_INPUT
@@ -147,13 +150,37 @@ float Attenuation(float3 lightDir, float3 attenuation)
     return 1 / max(factor, 1e-9);
 }
 
-float VectorToDepth(float3 vec)
+float GetShadowFactor(matrix transformation, float3 pos)
 {
-    float3 absVec = abs(vec);
-    float localZComp = max(absVec.x, max(absVec.y, absVec.z));
+    float4 proj = mul(float4(pos, 1.0f), transformation);
+    if (UseShadowPCF)
+        return simpleShadowMapTexture.SampleCmpLevelZero(MinMagMipLinearBorderLess, proj.xy, proj.z).r;
+    else
+        return (simpleShadowMapTexture.Sample(MinMagMipLinearBorder, proj.xy).r > proj.z) ? 1 : 0;
+}
 
-    float normZComp = (LIGHT_FAR + LIGHT_NEAR) / (LIGHT_FAR - LIGHT_NEAR) - (2 * LIGHT_FAR * LIGHT_NEAR) / (LIGHT_FAR - LIGHT_NEAR) / localZComp;
-    return (normZComp + 1.0f) * 0.5f;
+float GetShadowFactorArray(matrix transformation, float3 pos, int idx)
+{
+    float4 proj = mul(float4(pos, 1.0f), transformation);
+    if (UseShadowPCF)
+        return PSSMTexture.SampleCmpLevelZero(MinMagMipLinearBorderLess, float3(proj.xy, idx), proj.z).r;
+    else
+        return (PSSMTexture.Sample(MinMagMipLinearBorder, float3(proj.xy, idx)).r > proj.z) ? 1 : 0;
+}
+
+float GetShadowPSSMFactor(float3 pos)
+{
+    float dist = dot(pos - CameraPos.xyz, CameraDir.xyz);
+    if (dist < PSSMBorders.x)
+        return GetShadowFactorArray(PSSMTransform[0], pos, 0);
+    else if (dist < PSSMBorders.y)
+        return GetShadowFactorArray(PSSMTransform[1], pos, 1);
+    else if (dist < PSSMBorders.z)
+        return GetShadowFactorArray(PSSMTransform[2], pos, 2);
+    else if (dist < PSSMBorders.w)
+        return GetShadowFactorArray(PSSMTransform[3], pos, 3);
+    else
+        return 1.0f;
 }
 
 float3 LO_i(float3 p, float3 n, float3 v, uint lightIndex, float3 pos, float3 albedo, float metalness, float roughness)
@@ -163,11 +190,10 @@ float3 LO_i(float3 p, float3 n, float3 v, uint lightIndex, float3 pos, float3 al
     float atten = Attenuation(lightDir, LightAttenuations[lightIndex].xyz);
 	float3 l = normalize(lightDir);
     float shadowFactor = 1;
-    float4 proj = mul(float4(pos, 1.0f), SimpleShadowTransform);
-    if (UseShadowPCF)
-        shadowFactor = simpleShadowMapTexture.SampleCmpLevelZero(MinMagMipLinearClampLess, proj.xy, proj.z).r;
+    if (UseShadowPSSM)
+        shadowFactor = GetShadowPSSMFactor(pos);
     else
-        shadowFactor = (simpleShadowMapTexture.Sample(MinMagMipLinearClamp, proj.xy).r > proj.z) ? 1 : 0;
+        shadowFactor = GetShadowFactor(SimpleShadowTransform, pos);
     return BRDF(p, n, v, l, albedo, metalness, roughness) * lightColor.rgb * atten * max(dot(l, n), 0) * lightColor.a * shadowFactor;
 }
 
