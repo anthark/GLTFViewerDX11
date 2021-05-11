@@ -21,7 +21,8 @@ Settings::Settings(const std::shared_ptr<DeviceResources>& deviceResources) :
     m_depthBias(10),
     m_slopeScaledDepthBias(2 * static_cast<float>(sqrt(2))),
     m_useShadowPCF(true),
-    m_useShadowPSSM(false)
+    m_useShadowPSSM(false),
+    m_showPSSMSplits(false)
 {
     for (UINT i = 0; i < NUM_LIGHTS; ++i)
     {
@@ -101,6 +102,11 @@ void Settings::Render()
     ImGui::Checkbox("Use PCF", &m_useShadowPCF);
 
     ImGui::Checkbox("Use PSSM", &m_useShadowPSSM);
+
+    if (m_useShadowPSSM)
+        ImGui::Checkbox("Show splits", &m_showPSSMSplits);
+    else
+        m_showPSSMSplits = false;
 
     ImGui::End();
 

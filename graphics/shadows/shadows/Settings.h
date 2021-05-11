@@ -41,6 +41,7 @@ public:
     FLOAT GetSlopeScaledDepthBias() const { return m_slopeScaledDepthBias; };
     bool GetShadowPCFUsing() const { return m_useShadowPCF; };
     bool GetShadowPSSMUsing() const { return m_useShadowPSSM; };
+    bool GetPSSMSplitsShowing() const { return m_showPSSMSplits; };
 
     void Render();
 
@@ -64,4 +65,5 @@ private:
     float m_slopeScaledDepthBias;
     bool  m_useShadowPCF;
     bool  m_useShadowPSSM;
+    bool  m_showPSSMSplits;
 };

@@ -50,6 +50,7 @@ cbuffer Shadows : register(b3)
     float4 PSSMBorders;
     bool UseShadowPCF;
     bool UseShadowPSSM;
+    bool ShowPSSMSplits;
 }
 
 struct VS_INPUT
@@ -238,6 +239,21 @@ float2 GetMetalnessRoughness(float2 uv)
     return material.xy;
 }
 
+float3 GetPSSMSplitColor(float3 pos)
+{
+    float dist = dot(pos - CameraPos.xyz, CameraDir.xyz);
+    if (dist < PSSMBorders.x)
+        return float3(0, 0, 1);
+    else if (dist < PSSMBorders.y)
+        return float3(0, 1, 0);
+    else if (dist < PSSMBorders.z)
+        return float3(1, 1, 1);
+    else if (dist < PSSMBorders.w)
+        return float3(1, 0, 0);
+    else
+        return float3(0.5f, 0.5f, 0.5f);
+}
+
 float4 ps_main(PS_INPUT input) : SV_TARGET
 {
 	float3 color1, color2, color3;
@@ -268,6 +284,14 @@ float4 ps_main(PS_INPUT input) : SV_TARGET
 
     float3 ambient = Ambient(n, v, albedo.rgb, metalness, roughness);
 
-    return float4(color + ambient, albedo.a);
+    float4 result = float4(color + ambient, albedo.a);
+    
+    if (ShowPSSMSplits)
+    {
+        float3 splitColor = GetPSSMSplitColor(input.WorldPos.xyz);
+        result.xyz = result.xyz * 0.9f + splitColor * 0.1f;
+    }
+
+    return result;
 #endif
 }

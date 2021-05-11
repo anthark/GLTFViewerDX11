@@ -50,7 +50,6 @@ struct BlurConstantBuffer
 	DirectX::XMUINT2 ImageSize;
 };
 
-__declspec(align(16))
 struct ShadowConstantBuffer
 {
 	DirectX::XMMATRIX SimpleShadowTransform;
@@ -58,4 +57,5 @@ struct ShadowConstantBuffer
 	DirectX::XMFLOAT4 PSSMBorders;
 	BOOL UseShadowPCF;
 	BOOL UseShadowPSSM;
+	BOOL ShowPSSMSplits;
 };

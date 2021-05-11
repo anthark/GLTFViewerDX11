@@ -18,7 +18,7 @@ const UINT prefilteredColorSize = 128;
 const UINT preintegratedBRDFSize = 128;
 const UINT simpleShadowMapSize = 1024;
 const UINT PSSMSize = 1024;
-const float PSSMSplit = 2500.0f;
+const float PSSMSplit = 250.0f;
 const float projectionNear = 0.1f;
 const float projectionFar = 10000.0f;
 
@@ -881,6 +881,7 @@ HRESULT Renderer::Update()
 
     m_shadowBufferData.UseShadowPCF = m_pSettings->GetShadowPCFUsing();
     m_shadowBufferData.UseShadowPSSM = m_pSettings->GetShadowPSSMUsing();
+    m_shadowBufferData.ShowPSSMSplits = m_pSettings->GetPSSMSplitsShowing();
 
     m_materialBufferData.Albedo = m_pSettings->GetAlbedo();
     m_materialBufferData.Roughness = m_pSettings->GetRoughness();
