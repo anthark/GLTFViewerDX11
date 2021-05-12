@@ -34,9 +34,9 @@ Settings::Settings(const std::shared_ptr<DeviceResources>& deviceResources) :
 
     m_lightsAttenuations[0][2] = 0.001f;
     m_lightsStrengths[0] = 500.0f;
-    m_lightsThetaAngles[0] = 1.0f;
-    m_lightsPhiAngles[0] = 2.0f;
-    m_lightsDistances[0] = 325.0f;
+    m_lightsThetaAngles[0] = 1.1f;
+    m_lightsPhiAngles[0] = 2.1f;
+    m_lightsDistances[0] = 200.0f;
 };
 
 void Settings::CreateResources(HWND hWnd)
