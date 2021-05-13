@@ -1286,7 +1286,7 @@ void Renderer::RenderPSSM()
 
     DirectX::XMVECTOR dirNear, dirFar, rightNear, rightFar, upNear, upFar;
 
-    DirectX::XMVECTOR maxPoint, minPoint;
+    DirectX::XMVECTOR maxPoint, minPoint, maxModelPoint, minModelPoint;
 
     std::vector<DirectX::XMVECTOR> points(8);
     float aspectRatio = m_pDeviceResources->GetAspectRatio();
@@ -1297,8 +1297,8 @@ void Renderer::RenderPSSM()
         dirFar = DirectX::XMVectorScale(cameraDir, farBorder);
         rightNear = DirectX::XMVectorScale(cameraRight, nearBorder);
         rightFar = DirectX::XMVectorScale(cameraRight, farBorder);
-        upNear = DirectX::XMVectorScale(cameraUp, nearBorder * aspectRatio);
-        upFar = DirectX::XMVectorScale(cameraUp, farBorder * aspectRatio);
+        upNear = DirectX::XMVectorScale(cameraUp, nearBorder / aspectRatio);
+        upFar = DirectX::XMVectorScale(cameraUp, farBorder / aspectRatio);
         
         points[0] = DirectX::XMVectorAdd(cameraPos, DirectX::XMVectorAdd(dirNear, DirectX::XMVectorAdd(rightNear, upNear)));
         points[1] = DirectX::XMVectorAdd(cameraPos, DirectX::XMVectorAdd(dirNear, DirectX::XMVectorSubtract(rightNear, upNear)));
@@ -1315,12 +1315,55 @@ void Renderer::RenderPSSM()
         center = DirectX::XMVectorDivide(DirectX::XMVectorAdd(maxPoint, minPoint), DirectX::XMVectorReplicate(2));
         radius = DirectX::XMVector3Length(DirectX::XMVectorDivide(DirectX::XMVectorSubtract(maxPoint, minPoint), DirectX::XMVectorReplicate(2))).m128_f32[0];
 
-        view = DirectX::XMMatrixLookAtLH(DirectX::XMVectorAdd(center, DirectX::XMVectorScale(lightDir, radius * 2)), center, y);
+        view = DirectX::XMMatrixLookAtLH(DirectX::XMVectorAdd(center, lightDir), center, y);
         cb.View = DirectX::XMMatrixTranspose(view);
 
         for (size_t i = 0; i < 8; ++i)
             points[i] = DirectX::XMVector3Transform(points[i], view);
         GetMaximumMinimum(points, maxPoint, minPoint);
+
+        for (std::unique_ptr<Model>& model : m_pModels)
+        {
+            DirectX::XMVECTOR maxModel = model->GetMaximumPosition();
+            DirectX::XMVECTOR minModel = model->GetMinimumPosition();
+
+            points[0] = DirectX::XMVector3Transform(DirectX::XMVectorSet(maxModel.m128_f32[0], maxModel.m128_f32[1], minModel.m128_f32[2], 1.0f), view);
+            points[1] = DirectX::XMVector3Transform(DirectX::XMVectorSet(maxModel.m128_f32[0], minModel.m128_f32[1], minModel.m128_f32[2], 1.0f), view);
+            points[2] = DirectX::XMVector3Transform(DirectX::XMVectorSet(minModel.m128_f32[0], minModel.m128_f32[1], minModel.m128_f32[2], 1.0f), view);
+            points[3] = DirectX::XMVector3Transform(DirectX::XMVectorSet(minModel.m128_f32[0], maxModel.m128_f32[1], minModel.m128_f32[2], 1.0f), view);
+
+            points[4] = DirectX::XMVector3Transform(DirectX::XMVectorSet(maxModel.m128_f32[0], maxModel.m128_f32[1], maxModel.m128_f32[2], 1.0f), view);
+            points[5] = DirectX::XMVector3Transform(DirectX::XMVectorSet(maxModel.m128_f32[0], minModel.m128_f32[1], maxModel.m128_f32[2], 1.0f), view);
+            points[6] = DirectX::XMVector3Transform(DirectX::XMVectorSet(minModel.m128_f32[0], minModel.m128_f32[1], maxModel.m128_f32[2], 1.0f), view);
+            points[7] = DirectX::XMVector3Transform(DirectX::XMVectorSet(minModel.m128_f32[0], maxModel.m128_f32[1], maxModel.m128_f32[2], 1.0f), view);
+            
+            GetMaximumMinimum(points, maxModelPoint, minModelPoint);
+
+            if (minModelPoint.m128_f32[0] < maxPoint.m128_f32[0] && maxModelPoint.m128_f32[0] > minPoint.m128_f32[0] &&
+                maxModelPoint.m128_f32[1] > minPoint.m128_f32[1] && minModelPoint.m128_f32[1] < maxPoint.m128_f32[1])
+            {
+                maxPoint.m128_f32[2] = max(maxPoint.m128_f32[2], maxModelPoint.m128_f32[2]);
+                minPoint.m128_f32[2] = min(minPoint.m128_f32[2], minModelPoint.m128_f32[2]);
+                maxPoint.m128_f32[0] = max(maxPoint.m128_f32[0], maxModelPoint.m128_f32[0]);
+                minPoint.m128_f32[0] = min(minPoint.m128_f32[0], minModelPoint.m128_f32[0]);
+                maxPoint.m128_f32[1] = max(maxPoint.m128_f32[1], maxModelPoint.m128_f32[1]);
+                minPoint.m128_f32[1] = min(minPoint.m128_f32[1], minModelPoint.m128_f32[1]);
+            }
+        }
+        
+        points[0] = points[4] = DirectX::XMVector3Transform(DirectX::XMVectorSet(-750.0f, 0.0f, 750.0f, 1.0f), view);
+        points[1] = points[5] = DirectX::XMVector3Transform(DirectX::XMVectorSet(750.0f, 0.0f, 750.0f, 1.0f), view);
+        points[2] = points[6] = DirectX::XMVector3Transform(DirectX::XMVectorSet(750.0f, 0.0f, -750.0f, 1.0f), view);
+        points[3] = points[7] = DirectX::XMVector3Transform(DirectX::XMVectorSet(-750.0f, 0.0f, -750.0f, 1.0f), view);
+
+        GetMaximumMinimum(points, maxModelPoint, minModelPoint);
+
+        if (minModelPoint.m128_f32[0] < maxPoint.m128_f32[0] && maxModelPoint.m128_f32[0] > minPoint.m128_f32[0] &&
+            maxModelPoint.m128_f32[1] > minPoint.m128_f32[1] && minModelPoint.m128_f32[1] < maxPoint.m128_f32[1])
+        {
+            maxPoint.m128_f32[2] = max(maxPoint.m128_f32[2], maxModelPoint.m128_f32[2]);
+            minPoint.m128_f32[2] = min(minPoint.m128_f32[2], minModelPoint.m128_f32[2]);
+        }
 
         projection = DirectX::XMMatrixOrthographicOffCenterLH(minPoint.m128_f32[0], maxPoint.m128_f32[0], minPoint.m128_f32[1], maxPoint.m128_f32[1], minPoint.m128_f32[2], maxPoint.m128_f32[2]);
         cb.Projection = DirectX::XMMatrixTranspose(projection);
