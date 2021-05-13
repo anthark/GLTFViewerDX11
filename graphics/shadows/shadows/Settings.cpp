@@ -28,11 +28,10 @@ Settings::Settings(const std::shared_ptr<DeviceResources>& deviceResources) :
     {
         m_lightsColors[i][0] = m_lightsColors[i][1] = m_lightsColors[i][2] = 1.0f;
         m_lightsAttenuations[i][0] = 1.0f;
-        m_lightsAttenuations[i][1] = 0.1f;
-        m_lightsAttenuations[i][2] = 0.01f;
+        m_lightsAttenuations[i][1] = 0.01f;
     }
 
-    m_lightsAttenuations[0][2] = 0.001f;
+    m_lightsAttenuations[0][1] = 0.001f;
     m_lightsStrengths[0] = 500.0f;
     m_lightsThetaAngles[0] = 1.1f;
     m_lightsPhiAngles[0] = 2.1f;
@@ -85,7 +84,7 @@ void Settings::Render()
 
         ImGui::SliderFloat("Strength", m_lightsStrengths + i, 0.0f, 500.0f);
 
-        ImGui::SliderFloat3("Attenuation", m_lightsAttenuations[i], 0.001f, 1.0f);
+        ImGui::SliderFloat2("Attenuation", m_lightsAttenuations[i], 0.001f, 1.0f);
 
         ImGui::End();
     }
@@ -161,10 +160,7 @@ DirectX::XMFLOAT4 Settings::GetLightAttenuation(UINT index) const
 {
     if (index >= NUM_LIGHTS)
         return DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
-    float attenuation[4] = {};
-    for (UINT i = 0; i < 3; ++i)
-        attenuation[i] = m_lightsAttenuations[index][i];
-    return DirectX::XMFLOAT4(attenuation);
+    return DirectX::XMFLOAT4(m_lightsAttenuations[index][0], m_lightsAttenuations[index][1], 0.0f, 0.0f);
 }
 
 Settings::~Settings()

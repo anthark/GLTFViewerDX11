@@ -144,10 +144,10 @@ float3 BRDF(float3 p, float3 n, float3 v, float3 l, float3 albedo, float metalne
     return (1 - F) * albedo / PI * (1 - metalness) + D * F * G / (0.001f + 4 * (max(dot(l, n), 0) * max(dot(v, n), 0)));
 }
 
-float Attenuation(float3 lightDir, float3 attenuation)
+float Attenuation(float3 lightDir, float2 attenuation)
 {
 	float d = length(lightDir);
-    float factor = attenuation[0] + attenuation[1] * d + attenuation[2] * d * d;
+    float factor = attenuation.x + attenuation.y * d * d;
     return 1 / max(factor, 1e-9);
 }
 
@@ -188,7 +188,7 @@ float3 LO_i(float3 p, float3 n, float3 v, uint lightIndex, float3 pos, float3 al
 {
     float3 lightDir = LightPositions[lightIndex].xyz;
     float4 lightColor = LightColors[lightIndex];
-    float atten = Attenuation(lightDir, LightAttenuations[lightIndex].xyz);
+    float atten = Attenuation(lightDir, LightAttenuations[lightIndex].xy);
 	float3 l = normalize(lightDir);
     float shadowFactor = 1;
     if (UseShadowPSSM)
