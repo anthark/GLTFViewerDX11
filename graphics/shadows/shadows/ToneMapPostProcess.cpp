@@ -69,6 +69,12 @@ void ToneMapPostProcess::Process(ID3D11DeviceContext* context, ID3D11ShaderResou
     context->OMSetRenderTargets(1, &renderTarget, nullptr);
     context->RSSetViewports(1, &viewport);
 
+	D3D11_RECT rect;
+	rect.left = rect.top = 0;
+	rect.right = (UINT)viewport.Width;
+	rect.bottom = (UINT)viewport.Height;
+	context->RSSetScissorRects(1, &rect);
+
     context->IASetInputLayout(nullptr);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 

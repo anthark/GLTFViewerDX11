@@ -25,6 +25,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D11PixelShader>  m_pLuminancePixelShader;
     Microsoft::WRL::ComPtr<ID3D11SamplerState> m_pSamplerState;
     Microsoft::WRL::ComPtr<ID3D11Texture2D>    m_pLuminanceTexture;
+    Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_pRasterizerState;
 
     float m_adaptedLuminance;
 

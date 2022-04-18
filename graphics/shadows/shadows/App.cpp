@@ -56,6 +56,15 @@ LRESULT App::KeyHandler(WPARAM wParam, LPARAM lParam)
     case 68: // D
         m_pCamera->MovePerpendicular(cameraSpeed);
         break;
+
+    case 69: // E
+        m_pCamera->MoveVertical(-cameraSpeed);
+        break;
+
+    case 81: // Q
+		m_pCamera->MoveVertical(cameraSpeed);
+		break;
+
     default:
         break;
     }
@@ -68,6 +77,12 @@ LRESULT App::MouseHandler(UINT uMsg, WPARAM wParam)
     int dx, dy;
     switch (uMsg)
     {
+    case WM_MOUSEWHEEL:
+        {
+            int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+            m_pCamera->Zoom(zDelta * 2e-2f);
+        }
+        break;
     case WM_RBUTTONDOWN:
         GetCursorPos(&m_cursor);
         break;

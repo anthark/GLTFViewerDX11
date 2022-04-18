@@ -290,7 +290,8 @@ DirectX::XMMATRIX GetMatrixFromNode(tinygltf::Node& gltfNode)
         else
             scale = DirectX::XMMatrixScaling(static_cast<float>(gltfNode.scale[0]), static_cast<float>(gltfNode.scale[1]), static_cast<float>(gltfNode.scale[2]));
 
-        return DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(translation, rotation), scale);
+        //return DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(translation, rotation), scale);
+        return DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(scale, rotation), translation);
     }
     else
     {

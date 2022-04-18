@@ -43,6 +43,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         return g_pApp->KeyHandler(wParam, lParam);
     case WM_RBUTTONDOWN:
     case WM_MOUSEMOVE:
+    case WM_MOUSEWHEEL:
         return g_pApp->MouseHandler(uMsg, wParam);
     case WM_DESTROY:
         PostQuitMessage(0);

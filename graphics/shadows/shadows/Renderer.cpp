@@ -646,7 +646,18 @@ HRESULT Renderer::CreateModels()
     DirectX::XMMATRIX rotation;
     DirectX::XMMATRIX scale;
 
-    translation = DirectX::XMMatrixTranslation(0, 0.5f, 1000);
+	//translation = DirectX::XMMatrixTranslation(0, 0.5f, 1000);
+    translation = DirectX::XMMatrixTranslation(0, 20.0f, 0);
+	rotation = DirectX::XMMatrixRotationY(static_cast<float>(M_PI_2));
+	scale = DirectX::XMMatrixScaling(0.012f, 0.012f, 0.012f);
+	m_pModels.push_back(std::unique_ptr<Model>(new Model("artorias/scene.gltf", m_pModelShaders,
+		DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(rotation, translation), scale))));
+	hr = m_pModels[0]->CreateDeviceDependentResources(device);
+	if (FAILED(hr))
+		return hr;
+
+    // AAV TEMP
+    /*translation = DirectX::XMMatrixTranslation(0, 0.5f, 1000);
     rotation = DirectX::XMMatrixRotationY(static_cast<float>(M_PI_2));
     scale = DirectX::XMMatrixScaling(0.12f, 0.12f, 0.12f);
     m_pModels.push_back(std::unique_ptr<Model>(new Model("car_scene/scene.gltf", m_pModelShaders,
@@ -676,7 +687,7 @@ HRESULT Renderer::CreateModels()
     m_pModels.push_back(std::unique_ptr<Model>(new Model("red_barn/scene.gltf", m_pModelShaders, DirectX::XMMatrixMultiply(translation, scale))));
     hr = m_pModels[3]->CreateDeviceDependentResources(device);
     if (FAILED(hr))
-        return hr;
+        return hr;*/
 
     DirectX::XMVECTOR maxPosition = DirectX::XMVectorSet(-INFINITY, -INFINITY, -INFINITY, 0);
     DirectX::XMVECTOR minPosition = DirectX::XMVectorSet(INFINITY, INFINITY, INFINITY, 0);

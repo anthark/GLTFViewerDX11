@@ -59,6 +59,19 @@ HRESULT AverageLuminanceProcess::CreateDeviceDependentResources(ID3D11Device* de
         D3D11_CPU_ACCESS_READ
     );
     hr = device->CreateTexture2D(&ltd, nullptr, &m_pLuminanceTexture);
+	if (FAILED(hr))
+		return hr;
+
+	D3D11_RASTERIZER_DESC rd;
+	rd.FillMode = D3D11_FILL_SOLID;
+	rd.CullMode = D3D11_CULL_NONE;
+	rd.DepthBias = 0;
+	rd.DepthBiasClamp = 0;
+	rd.SlopeScaledDepthBias = 0;
+	rd.DepthClipEnable = true;
+	hr = device->CreateRasterizerState(&rd, &m_pRasterizerState);
+	if (FAILED(hr))
+		return hr;
 
     return hr;
 }
@@ -102,6 +115,12 @@ void AverageLuminanceProcess::CopyTexture(ID3D11DeviceContext* context, ID3D11Sh
     context->OMSetRenderTargets(1, &renderTarget, nullptr);
     context->RSSetViewports(1, &viewport);
 
+	D3D11_RECT rect;
+	rect.left = rect.top = 0;
+	rect.right = (UINT)viewport.Width;
+	rect.bottom = (UINT)viewport.Height;
+	context->RSSetScissorRects(1, &rect);
+
     context->PSSetShader(pixelShader, nullptr, 0);
     context->PSSetShaderResources(0, 1, &sourceTexture);
     
@@ -126,6 +145,8 @@ float AverageLuminanceProcess::Process(ID3D11DeviceContext* context, ID3D11Shade
     context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
 
     context->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
+
+    context->RSSetState(m_pRasterizerState.Get());
 
     CopyTexture(context, sourceTexture, m_renderTextures[0], m_pCopyPixelShader.Get());
     CopyTexture(context, m_renderTextures[0].GetShaderResourceView(), m_renderTextures[1], m_pLuminancePixelShader.Get());
